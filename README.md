@@ -51,6 +51,21 @@ sang công việc cụ thể của từng quyển:
 
 Mỗi báo cáo có **1 file PDF riêng** (`Bao_cao_pdf_*.pdf`) dùng khi không có Word.
 
+## Quy trình từ tuần 5/10 – 10/10/2026
+
+File Word trong kho là bản gốc đã được sinh viên hiệu đính (xóa mục, ghi chú bôi
+đỏ đã xử lý). PDF dựng thẳng từ Word:
+
+```bash
+python3 tools/xuat_pdf_tu_docx.py   # 6 PDF riêng + PDF gộp từ 6 file .docx
+```
+
+Các ghi chú bôi đỏ của tuần này đã thực hiện: bỏ công tắc hành trình khỏi quyển
+nghiên cứu đồ án 1 (mục 2.6), mục 3.5 chế tạo 1 trục thành mạch đọc quang trở,
+quyển lập trình chỉ còn lưu đồ + code (code đầy đủ chuyển xuống Phụ lục A),
+lưu đồ vẽ lại (đọc ADC, cầu H, có khối khởi tạo và nút kết thúc), số liệu mô
+phỏng ghi rõ là tham khảo chờ kiểm chứng, mục 4.1 chỉ ghi việc đã làm thật.
+
 ## Dựng lại toàn bộ
 
 ```bash
