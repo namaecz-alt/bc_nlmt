@@ -153,7 +153,7 @@ def so_do_3_phuong_phap():
              [("RTC DS1307\nđọc ngày, giờ", 14), ("Tính δ, H, α, γ\ntheo công thức", 36),
               ("Đổi ra góc đặt\ncủa tấm pin", 58), ("Cầu H chạy motor\ntới góc đặt", 80)], None),
             ("b) Nhóm 2 – Vòng kín cảm biến LDR", 38,
-             [("4 LDR + vách che\nđọc 4 mức sáng", 14), ("e1 = trái − phải\ne2 = trên − dưới", 36),
+             [("4 LDR gá nghiêng β_s\nđọc 4 mức sáng", 14), ("e1 = trái − phải\ne2 = trên − dưới", 36),
               ("|e| > ngưỡng?\nso dấu, vùng chết", 58), ("Cầu H quay đúng chiều\nđến khi cân bằng", 80)],
              "tấm pin gắn cụm LDR"),
             ("c) Nhóm 3 – HYBRID (đề tài chọn)", 14,
@@ -187,15 +187,19 @@ def bo_tri_ldr():
     a1.set_xlim(-6, 106)
     a1.set_ylim(-12, 76)
     a1.add_patch(Rectangle((10, 8), 80, 54, fc="white", ec=EDGE, lw=1.2))
-    a1.add_patch(Rectangle((48.5, 8), 3, 54, fc="#dddddd", ec=EDGE, lw=0.8))
-    a1.text(50, 66, "vách che giữa", ha="center", va="center", fontsize=7.6, color=TXT)
-    pos = {"L_trái trên": (20, 52), "L_phải trên": (80, 52),
-           "L_trái dưới": (20, 18), "L_phải dưới": (80, 18)}
-    for k, (x, y) in pos.items():
+    pos = {"LDR trái trên": (20, 52, -1, 1), "LDR phải trên": (80, 52, 1, 1),
+           "LDR trái dưới": (20, 18, -1, -1), "LDR phải dưới": (80, 18, 1, -1)}
+    for k, (x, y, dx, dy) in pos.items():
         a1.add_patch(plt.Circle((x, y), 4.0, fc="white", ec=EDGE, lw=1.1))
-        a1.text(x, y - 8.5, k.replace("_", " "), ha="center", va="center", fontsize=7.6, color=TXT)
-    a1.text(50, 35, "tấm pin\n(nhìn thẳng)", ha="center", va="center", fontsize=8, color="#555555")
-    a1.text(50, -6, "Bốn LDR ở bốn góc, vách che giữa tạo bóng lệch khi nắng xiên",
+        a1.annotate("", xy=(x + dx * 10, y + dy * 8), xytext=(x, y),
+                    arrowprops=dict(arrowstyle="-|>", color=EDGE, lw=0.9))
+        a1.text(x - dx * 1, y - dy * 9.5, k, ha="center", va="center",
+                fontsize=7.4, color=TXT)
+    a1.text(50, 35, "tấm pin\n(nhìn thẳng)", ha="center", va="center",
+            fontsize=8, color="#555555")
+    a1.text(50, 68, "mũi tên: hướng trục cảm quang nghiêng ra ngoài tâm",
+            ha="center", va="center", fontsize=7.6, color=TXT)
+    a1.text(50, -6, "Bốn LDR ở bốn góc, chỉ gá nghiêng quang trở, không dùng vách ngăn",
             ha="center", va="center", fontsize=8, color=TXT)
     a2.set_xlim(-6, 106)
     a2.set_ylim(-14, 72)
@@ -203,17 +207,19 @@ def bo_tri_ldr():
     a2.text(50, 13.5, "mặt tấm pin", ha="center", fontsize=8, color=TXT)
     line(a2, 50, 18, 50, 58)
     a2.text(51.5, 60, "pháp tuyến", fontsize=8, color=TXT, ha="left")
-    a2.add_patch(Rectangle((48.8, 18), 2.4, 26, fc="#dddddd", ec=EDGE, lw=0.8))
-    a2.text(50, 47, "vách che", fontsize=7.4, ha="center", color=TXT)
-    for sx, lab in ((26, "LDR trái"), (74, "LDR phải")):
+    for sx, dx, lab in ((26, -1, "LDR trái"), (74, 1, "LDR phải")):
         a2.add_patch(plt.Circle((sx, 21), 3.2, fc="white", ec=EDGE, lw=1.1))
-        a2.plot([sx, sx + (10 if sx > 50 else -10)], [21, 40], color=EDGE, lw=1.0)
-        a2.text(sx + (12 if sx > 50 else -12), 43, lab, fontsize=7.6, ha="center", color=TXT)
-    th = [50 + 13 * math.cos(math.radians(t)) for t in range(60, 91)]
-    thy = [18 + 13 * math.sin(math.radians(t)) for t in range(60, 91)]
+        a2.annotate("", xy=(sx + dx * 14, 21 + 22), xytext=(sx, 21),
+                    arrowprops=dict(arrowstyle="-|>", color=EDGE, lw=1.0))
+        a2.text(sx + dx * 17, 46, lab, fontsize=7.6, ha="center", color=TXT)
+    th = [50 + 15 * math.cos(math.radians(t)) for t in range(62, 91)]
+    thy = [18 + 15 * math.sin(math.radians(t)) for t in range(62, 91)]
     a2.plot(th, thy, color=EDGE, lw=0.9)
-    a2.text(39, 32, "β_s", fontsize=9, color=TXT)
-    a2.text(50, -8, "Mặt cắt: vách che làm một bên LDR bị bóng khi nắng lệch",
+    a2.text(38, 35, "β_s", fontsize=9, color=TXT)
+    th2 = [50 - 15 * math.cos(math.radians(t)) for t in range(62, 91)]
+    a2.plot(th2, thy, color=EDGE, lw=0.9)
+    a2.text(59, 35, "β_s", fontsize=9, color=TXT)
+    a2.text(50, -8, "Mặt cắt: trục cảm quang mỗi LDR nghiêng góc β_s so với pháp tuyến",
             ha="center", fontsize=8, color=TXT)
     fig.tight_layout()
     p = os.path.join(OUT, "bo_tri_4_ldr.png")

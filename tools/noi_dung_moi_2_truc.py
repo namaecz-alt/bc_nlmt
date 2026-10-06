@@ -26,7 +26,7 @@ NEW_29 = [
     ("b", "Ưu điểm: ổn định, không phụ thuộc thời tiết, không dao động."),
     ("b", "Nhược điểm: cần cài đúng tọa độ và giờ; không tự sửa sai số lắp đặt và độ rơ khớp 3D."),
     ("h3", "2.9.2. Nhóm 2 – Vòng kín dùng cảm biến quang trở (LDR)"),
-    ("p", "Bốn LDR ở bốn góc tấm pin, giữa có vách che tạo bóng lệch. Sai lệch điều khiển của hai trục:"),
+    ("p", "Bốn LDR ở bốn góc tấm pin, mỗi cảm biến gá nghiêng ra ngoài tâm một góc β_s = 30°, không dùng vách ngăn. Sai lệch điều khiển của hai trục:"),
     ("eq", "e1 = ADC(LDR_trái) − ADC(LDR_phải);   e2 = ADC(LDR_trên) − ADC(LDR_dưới)"),
     ("b", "Nếu |e1| > ngưỡng: quay motor phương vị theo dấu e1; nếu |e2| > ngưỡng: quay motor nghiêng theo dấu e2."),
     ("b", "Ngược lại thì dừng – vùng chết chống dao động quanh vị trí cân bằng."),
@@ -45,7 +45,7 @@ NGHIEN_CUU_CH3 = [
     ("img", "hinh_ve/duong_di_mat_troi.png", "{H}. Góc cao và góc phương vị Mặt Trời trong bốn ngày đại diện tại Mỹ Hào"),
     ("p", "Đồ thị tính theo công thức thiên văn cho vĩ độ 20,93° Bắc cho thấy hệ hai trục phải giải quyết hai bài toán khác nhau: góc cao giữa trưa thay đổi từ 46° (đông chí) tới 88° (hạ chí) nên trục nghiêng phải đi một hành trình rất rộng theo mùa; còn góc phương vị quét gần 240° trong ngày nên trục phương vị phải chỉnh liên tục. Một trục đơn không thể đồng thời thỏa cả hai, đó là lý do mô hình này tách thành khớp quay và khớp nâng."),
     ("h2", "3.2. Ma trận bốn LDR nhìn hướng nắng theo hai phương"),
-    ("img", "hinh_ve/bo_tri_4_ldr.png", "{H}. Bốn LDR và vách che giữa trên tấm pin hai trục"),
+    ("img", "hinh_ve/bo_tri_4_ldr.png", "{H}. Bốn LDR gá nghiêng β_s ở bốn góc tấm pin hai trục"),
     ("p", "Cùng một cụm bốn LDR cho cả hai sai lệch: e1 = trái − phải chỉ phương vị, e2 = trên − dưới chỉ độ nghiêng. Bảng ví dụ số đọc được khi Mặt Trời lệch khỏi pháp tuyến tấm pin:"),
     ("tbl", [
         ["Góc lệch", "ADC kênh yếu", "ADC kênh mạnh", "|e| điển hình", "Lệnh"],
@@ -124,7 +124,7 @@ CHE_TAO_CH1 = [
     ("img", "hinh_ve/so_do_khoi_2_truc.png", "{H}. Sơ đồ khối hệ thống bám nắng hai trục phương pháp hybrid"),
     ("tbl", [
         ["Khối", "Linh kiện chính", "Nhiệm vụ"],
-        ["Cảm biến hướng", "4 LDR + vách che giữa", "Tạo e1 (phương vị) và e2 (nghiêng)."],
+        ["Cảm biến hướng", "4 LDR gá nghiêng β_s = 30°", "Tạo e1 (phương vị) và e2 (nghiêng)."],
         ["Hồi tiếp góc", "2 biến trở xoay chia áp", "Báo góc từng khớp cho giới hạn và hiển thị."],
         ["Thời gian thực", "DS1307 (I²C 0x68)", "Cấp ngày giờ cho khối thiên văn."],
         ["Điều khiển", "ESP32 DevKit", "ADC, thiên văn, so ngưỡng, phát lệnh, hiển thị."],
@@ -135,9 +135,9 @@ CHE_TAO_CH1 = [
         ["Bảo vệ", "4 công tắc hành trình + nút dừng", "Chặn quá hành trình từng khớp."],
         ["Nguồn", "12 V + 1N4007 + LM2596 + 7805", "Ba nhánh 12 V / 3,3 V / 5 V như bản một trục."],
     ], "{B}. Các khối chức năng của hệ thống hai trục"),
-    ("h2", "1.3. Cụm bốn LDR và vách che giữa"),
-    ("img", "hinh_ve/bo_tri_4_ldr.png", "{H}. Bố trí bốn LDR và vách che giữa trên tấm pin"),
-    ("p", "Cụm cảm biến in 3D thành một khối duy nhất gồm bốn ống gá LDR và vách che giữa, bắt lên góc tấm pin bằng bốn vít; nhờ in liền khối nên góc gá và chiều cao vách che đồng đều giữa các bản chế tạo."),
+    ("h2", "1.3. Cụm bốn LDR gá nghiêng β_s"),
+    ("img", "hinh_ve/bo_tri_4_ldr.png", "{H}. Bố trí bốn LDR gá nghiêng β_s trên tấm pin hai trục"),
+    ("p", "Cụm cảm biến in 3D thành một khối duy nhất gồm bốn ống gá LDR nghiêng sẵn góc β_s = 30°, bắt lên bốn góc tấm pin bằng bốn vít; nhờ in liền khối nên góc nghiêng của bốn cảm biến đồng đều giữa các bản chế tạo."),
     ("h2", "1.4. Hai động cơ gạt nước trục vít tự hãm"),
     ("p", "Khớp phương vị và khớp nghiêng mỗi khớp một motor gạt nước 12 V trục vít – bánh vít; tính tự hãm giữ tấm pin 4 kg đứng yên khi mất điện, riêng khớp nghiêng nhờ đó không bị trọng trường kéo trôi suốt đêm. Mô-men và dòng tải xem bảng tính chọn ở chương 2."),
 ]
@@ -156,7 +156,7 @@ CHE_TAO_CH2 = [
     ("h2", "2.3. Chi tiết in 3D và lựa chọn vật liệu"),
     ("tbl", [
         ["Chi tiết", "Công nghệ / vật liệu", "Yêu cầu chính"],
-        ["Khối gá 4 LDR + vách che", "In PETG, điền đầy 40%", "Ổn định kích thước dưới nắng, không cong vách che."],
+        ["Khối gá 4 LDR nghiêng β_s", "In PETG, điền đầy 40%", "Ổn định kích thước dưới nắng, giữ đúng góc nghiêng β_s."],
         ["Gối trục nghiêng (2 cái)", "In PETG, điền đầy 60%", "Chịu nén, chạy êm với trục thép."],
         ["Đế motor và tay đòn", "In PETG lõi 50% + ốc thép", "Truyền mô-men 8–12 N·m không trượt răng."],
         ["Kẹp biến trở hồi tiếp", "In PLA+", "Ôm sát trục, không trượt khi rung."],
@@ -197,7 +197,7 @@ CHE_TAO_CH2 = [
         ["TT", "Hạng mục", "Thông số", "SL"],
         ["1", "Tấm pin mặt trời", "100 W, khoảng 4 kg", "1"],
         ["2", "Quang trở LDR", "GL5528 cùng lô", "4"],
-        ["3", "Khối gá LDR + vách che", "In PETG liền khối", "1"],
+        ["3", "Khối gá bốn LDR nghiêng β_s", "In PETG liền khối", "1"],
         ["4", "Bo điều khiển", "ESP32 DevKit 38 chân", "1"],
         ["5", "Module RTC", "DS1307 có pin nuôi", "1"],
         ["6", "Màn hình", "LCD 1602 + PCF8574 I²C", "1"],
@@ -218,7 +218,7 @@ CHE_TAO_CH3 = [
     ("b", "Hoàn thành thử bench hai mạch động lực và bốn kênh opto theo đúng bảng trạng thái cầu H."),
     ("b", "Hoàn thành lắp tầng đế và khớp phương vị: kiểm tra quay trơn 360° và giới hạn mềm ±120°."),
     ("b", "Hoàn thành lắp khớp nâng nghiêng, đối trọng và cân mô-men trọng trường dưới 3 N·m."),
-    ("b", "Hoàn thành in và lắp khối gá LDR liền vách che; đo lại bốn góc gá sau khi bắt vít."),
+    ("b", "Hoàn thành in và lắp khối gá bốn LDR nghiêng β_s; đo lại bốn góc gá sau khi bắt vít."),
     ("b", "Hoàn thành đấu nối theo sheet hai trục; đo thông mạch từng mạng trước khi cấp nguồn."),
     ("h2", "3.2. Hiệu chuẩn"),
     ("b", "Hoàn thành hiệu chuẩn K_cal bốn kênh LDR và hai biến trở hồi tiếp ba điểm cho từng khớp."),
@@ -297,7 +297,7 @@ LAP_TRINH_CH3 = [
     ("h2", "3.3. Thiết kế cơ khí phục vụ phần mềm"),
     ("b", "Hai biến trở hồi tiếp gắn đồng trục từng khớp để code nội suy tuyến tính ba điểm."),
     ("b", "Bốn công tắc hành trình đặt ngoài vùng làm việc 2°, code dùng làm giới hạn cứng từng chiều."),
-    ("b", "Khối gá LDR in 3D liền vách che giữ hệ số K_cal ổn định giữa các lần chạy."),
+    ("b", "Khối gá LDR in 3D giữ nguyên góc nghiêng β_s sau hiệu chuẩn để hệ số K_cal ổn định giữa các lần chạy."),
     ("h2", "3.4. Hiệu chuẩn và đo đạc"),
     ("b", "Hoàn thành hiệu chuẩn K_cal bốn kênh LDR; sai lệch sau hiệu chuẩn dưới 2%."),
     ("b", "Hoàn thành hiệu chuẩn hai biến trở ba điểm; sai số góc suy ra ≤ 1,5° mỗi khớp."),
@@ -471,3 +471,38 @@ LAP_TRINH_CH4 = [
     ("b", "Tinh chỉnh ngưỡng e1/e2 và độ dài bước chạy để giảm số lần khởi động hai motor."),
     ("b", "Bổ sung chế độ gió lớn: đọc lịch và đưa tấm pin về vị trí nghỉ nằm ngang."),
 ]
+
+# ---------- lien ket giua cac quyen (bo sung) ----------
+NGHIEN_CUU_CH3.extend([
+    ("h2", "3.6. Các nội dung sẽ triển khai ở quyển chế tạo và quyển lập trình"),
+    ("b", "Quyển chế tạo: triển khai cấu trúc 3D ba tầng (đế xoay phương vị, khớp nâng nghiêng có đối trọng, khung mang pin) và cụm gá bốn LDR nghiêng β_s = 30° in liền khối; thi công hai mạch động lực cầu H bốn TIP41C và các sheet nguồn, RTC, LCD, hành trình theo đúng bộ tham số hybrid."),
+    ("b", "Quyển chế tạo: tính chọn hai động cơ gạt nước cho tấm pin 100 W – 4 kg theo bảng mô-men gió từng khớp, kèm quy tắc đưa tấm pin về vị trí nghỉ nằm ngang khi gió vượt 8 m/s."),
+    ("b", "Quyển lập trình: hiện thực ba nhánh hybrid cho hai khớp với thứ tự tinh chỉnh nghiêng trước – phương vị sau; đọc ADC sáu kênh có lọc và K_cal; điều khiển hai cầu H tích cực thấp; đọc DS1307, hiển thị LCD I2C, đọc hai biến trở; lưu đồ từng phần và tổng quát; code mẫu hai trục hoàn chỉnh."),
+    ("b", "Cả hai quyển dùng ma trận tính toán (α, γ) theo giờ ở chương 4 làm bảng kiểm tra chéo đầu ra khối thiên văn của code khi chạy thử không tải."),
+])
+CHE_TAO_CH1.extend([
+    ("h2", "1.5. Tổng hợp các kết quả tiếp nhận từ quyển nghiên cứu"),
+    ("tbl", [
+        ["Nội dung đã chốt ở quyển nghiên cứu", "Giá trị", "Áp dụng trong quyển chế tạo"],
+        ["Phương pháp điều khiển", "Hybrid hai khớp: thiên văn thô + LDR tinh chỉnh (e2 nghiêng trước, e1 phương vị sau) + giữ vị trí khi mây mù", "Nguyên lý mục 1.1 và sơ đồ khối mục 1.2."],
+        ["Ngưỡng phát lệnh / vùng chết", "|e| > 200 / dừng dưới 120 mức ADC", "Mạch chia áp, cài liên động từng khớp."],
+        ["Ngưỡng mây mù S_min", "Tổng 4 kênh < 2500", "Nhánh giữ vị trí theo lịch."],
+        ["Góc gá cảm biến", "β_s = 30°, chỉ nghiêng quang trở, không vách ngăn", "Khối gá LDR in 3D liền khối."],
+        ["So sánh ba luật", "Hybrid sai số trung bình 2,9°, 83 lần chạy motor/ngày", "Căn cứ chọn motor và độ cứng khớp 3D."],
+        ["Lợi ích năng lượng", "Hai trục +50…351% so tấm cố định, hơn một trục rõ nhất mùa đông", "Quyết định đầu tư khớp nghiêng thứ hai."],
+        ["Ma trận (α, γ) theo giờ và bước nhảy 180° trưa hạ chí", "Chương 4 quyển nghiên cứu", "Bảng kiểm tra chéo góc đặt hai khớp."],
+    ], "{B}. Các kết quả tiếp nhận từ quyển nghiên cứu và cách áp dụng"),
+])
+LAP_TRINH_CH2.extend([
+    ("h2", "2.5. Các tham số và kết quả kế thừa từ quyển nghiên cứu"),
+    ("tbl", [
+        ["Đại lượng", "Giá trị chốt trong quyển nghiên cứu", "Dùng trong code"],
+        ["Chu kỳ thiên văn / LDR", "30 phút / 2 phút", "T_TV = 1800000 ms; T_LDR = 120000 ms."],
+        ["Ngưỡng / vùng chết", "|e| > 200 / 120 mức ADC", "Hằng số NGUONG và điều kiện dừng."],
+        ["Ngưỡng mây mù S_min", "2500 (tổng bốn kênh)", "Nhánh giữ vị trí cả hai khớp."],
+        ["Thứ tự tinh chỉnh", "Khớp nghiêng (e2) trước, phương vị (e1) sau", "Thứ tự gọi trong nhánh LDR của loop()."],
+        ["Góc gá cảm biến β_s", "30°, chỉ nghiêng quang trở", "Cơ sở hiệu chuẩn K_cal bốn kênh."],
+        ["Sai số luật hybrid", "2,9° trung bình; 83 lần chạy motor/ngày", "Mốc so sánh log đo ngoài trời."],
+        ["Ma trận (α, γ) và chuẩn hóa 180°", "Chương 4 quyển nghiên cứu", "Hàm thienVan() và bảng đối chiếu."],
+    ], "{B}. Tham số kế thừa từ quyển nghiên cứu đưa vào chương trình hai trục"),
+])

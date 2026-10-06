@@ -29,7 +29,7 @@ NEW_29 = [
     ("b", "Ưu điểm: ổn định, không phụ thuộc thời tiết, không dao động quanh vị trí cân bằng."),
     ("b", "Nhược điểm: phải cài đúng tọa độ và giờ; không tự sửa được sai số do lắp đặt lệch hoặc khớp cơ khí rơ."),
     ("h3", "2.9.2. Nhóm 2 – Vòng kín dùng cảm biến quang trở (LDR)"),
-    ("p", "Bốn LDR đặt ở bốn góc tấm pin, giữa có vách che tạo bóng lệch khi nắng xiên. Gọi giá trị đọc được của bốn kênh là trái, phải, trên, dưới, sai lệch điều khiển tính rất đơn giản:"),
+    ("p", "Bốn LDR đặt ở bốn góc tấm pin, mỗi cảm biến gá nghiêng ra ngoài tâm một góc β_s = 30° như nhau, không dùng vách ngăn. Khi nắng thẳng góc, bốn kênh nhận sáng gần bằng nhau; khi nắng xiên, cặp cảm biến phía bên nắng nhận mạnh hơn hẳn. Gọi giá trị đọc được của bốn kênh là trái, phải, trên, dưới, sai lệch điều khiển tính rất đơn giản:"),
     ("eq", "e1 = ADC(LDR_trái) − ADC(LDR_phải);   e2 = ADC(LDR_trên) − ADC(LDR_dưới)"),
     ("b", "Nếu |e1| > ngưỡng: quay động cơ trục 1 theo dấu e1; nếu |e2| > ngưỡng: quay động cơ trục 2 theo dấu e2."),
     ("b", "Ngược lại thì dừng – vùng chết (dead-band) chống dao động quanh vị trí cân bằng."),
@@ -50,8 +50,8 @@ NGHIEN_CUU_CH3 = [
     ("img", "hinh_ve/duong_di_mat_troi.png", "{H}. Góc cao và góc phương vị Mặt Trời trong bốn ngày đại diện tại Mỹ Hào"),
     ("p", "Đồ thị cho thấy ba đặc điểm quyết định thiết kế: giữa trưa hạ chí Mặt Trời lên gần thiên đỉnh (α ≈ 88°) còn đông chí chỉ đạt 46°, nên góc nghiêng thay đổi rất nhiều theo mùa; buổi sáng và chiều góc phương vị đổi nhanh (khoảng 15° mỗi giờ), nên trục quay Đông–Tây phải chỉnh liên tục trong ngày; toàn bộ quỹ đạo đối xứng qua giờ trưa nên lịch thiên văn rất dễ tính và ổn định."),
     ("h2", "3.2. Ma trận bốn LDR nhìn hướng nắng như thế nào"),
-    ("img", "hinh_ve/bo_tri_4_ldr.png", "{H}. Bốn LDR ở bốn góc tấm pin với vách che giữa tạo bóng lệch"),
-    ("p", "Khi nắng chiếu thẳng góc, vách che giữa che đều và bốn kênh đọc gần bằng nhau, e1 và e2 xấp xỉ 0: tấm pin đang đúng hướng. Khi nắng xiên sang một bên, vách che đổ bóng lên cặp LDR phía kia nên hiệu e1 khác 0 và dấu của e1 chỉ đúng phía cần quay tới. Bảng dưới là ví dụ số đọc được khi Mặt Trời lệch khỏi pháp tuyến tấm pin các góc khác nhau (giá trị ADC 12 bit):"),
+    ("img", "hinh_ve/bo_tri_4_ldr.png", "{H}. Bốn LDR gá nghiêng β_s ở bốn góc tấm pin, không dùng vách ngăn"),
+    ("p", "Khi nắng chiếu thẳng góc tấm pin, bốn cảm biến nghiêng nhận sáng gần như nhau nên e1 và e2 xấp xỉ 0: tấm pin đang đúng hướng. Khi nắng xiên sang một bên, cặp cảm biến phía bên nắng nhận mạnh hơn cặp đối diện nên e1 khác 0, và dấu của e1 chỉ đúng phía cần quay tới. Bảng dưới là ví dụ số đọc được khi Mặt Trời lệch khỏi pháp tuyến tấm pin các góc khác nhau (giá trị ADC 12 bit):"),
     ("tbl", [
         ["Góc lệch Mặt Trời – tấm pin", "ADC LDR trái", "ADC LDR phải", "e1 = trái − phải", "Lệnh quay"],
         ["−20° (lệch Đông)", "3100", "2074", "+1026", "Quay sang trái (về Đông)"],
@@ -147,7 +147,7 @@ CHE_TAO_CH1 = [
     ("img", "hinh_ve/so_do_khoi_1_truc.png", "{H}. Sơ đồ khối hệ thống bám nắng một trục phương pháp hybrid"),
     ("tbl", [
         ["Khối", "Linh kiện chính", "Nhiệm vụ"],
-        ["Cảm biến hướng", "4 LDR + vách che giữa", "Tạo e1 cho vòng tinh chỉnh."],
+        ["Cảm biến hướng", "4 LDR gá nghiêng β_s = 30°", "Tạo e1 cho vòng tinh chỉnh."],
         ["Hồi tiếp góc", "Biến trở xoay chia áp", "Báo góc tấm pin cho giới hạn và hiển thị."],
         ["Thời gian thực", "Module DS1307 (I²C 0x68)", "Cấp ngày, giờ cho khối thiên văn."],
         ["Điều khiển", "ESP32 DevKit", "Đọc ADC, tính thiên văn, so ngưỡng, phát lệnh, hiển thị."],
@@ -158,9 +158,9 @@ CHE_TAO_CH1 = [
         ["Bảo vệ", "4 công tắc hành trình kéo xuống 1k + nút dừng", "Chặn quá hành trình, cắt lệnh an toàn."],
         ["Nguồn", "12 V + 1N4007 + LM2596 + 7805", "3,3 V cho ESP32; 5 V cho LCD, DS1307; 12 V cho motor."],
     ], "{B}. Các khối chức năng của hệ thống một trục"),
-    ("h2", "1.3. Cụm bốn LDR và vách che giữa"),
-    ("img", "hinh_ve/bo_tri_4_ldr.png", "{H}. Bố trí bốn LDR và vách che giữa trên tấm pin"),
-    ("p", "Bốn LDR hàn trên mạch nhỏ bắt ở bốn góc tấm pin, vách che nhôm cao khoảng 3 cm chạy giữa theo chiều Bắc–Nam để tạo bóng lệch Đông–Tây. Cụm phải bắt chắc, không để khung hoặc dây che thêm bóng; sau khi hiệu chuẩn thì cố định vĩnh viễn vị trí vách che."),
+    ("h2", "1.3. Cụm bốn LDR gá nghiêng β_s"),
+    ("img", "hinh_ve/bo_tri_4_ldr.png", "{H}. Bố trí bốn LDR gá nghiêng β_s trên tấm pin"),
+    ("p", "Bốn LDR hàn trên mạch nhỏ bắt ở bốn góc tấm pin, mỗi cảm biến gá nghiêng ra ngoài tâm một góc β_s = 30° theo cả hai mặt cắt Đông–Tây và Bắc–Nam. Giá gá phải chắc, không để khung hoặc dây che bóng cảm biến; sau khi hiệu chuẩn thì cố định vĩnh viễn góc gá để hệ số K_cal không đổi."),
     ("h2", "1.4. Động cơ gạt nước và khớp trục vít tự hãm"),
     ("p", "Trục quay căn hướng Bắc–Nam, đặt sát trọng tâm tấm pin 100 W nặng khoảng 4 kg. Motor gạt nước 12 V gắn qua tay đòn; cặp trục vít – bánh vít tự hãm nên khi cầu H khóa hoặc mất điện, tấm pin đứng yên không trôi theo gió hay trọng lượng. Công tắc tự đỗ của motor dùng làm mốc tham khảo khi tìm vị trí home."),
 ]
@@ -216,7 +216,7 @@ CHE_TAO_CH2 = [
         ["TT", "Hạng mục", "Thông số", "SL"],
         ["1", "Tấm pin mặt trời", "100 W, khoảng 4 kg", "1"],
         ["2", "Quang trở LDR", "GL5528 cùng lô", "4"],
-        ["3", "Vách che giữa", "Nhôm tấm cao 3 cm", "1"],
+        ["3", "Giá gá bốn LDR", "Gá nghiêng β_s = 30°, nhôm hoặc in PETG", "1 bộ"],
         ["4", "Bo điều khiển", "ESP32 DevKit 38 chân", "1"],
         ["5", "Module RTC", "DS1307 có pin nuôi", "1"],
         ["6", "Màn hình", "LCD 1602 + PCF8574 I²C", "1"],
@@ -238,7 +238,7 @@ CHE_TAO_CH3 = [
     ("h2", "3.1. Quy trình lắp ráp đã thực hiện"),
     ("b", "Hoàn thành thử bench mạch động lực: cấp 12 V giả tải, kiểm tra bảng trạng thái cầu H đúng như thiết kế, đo sụt áp TIP41C khi dẫn dưới 1,5 V ở 4 A."),
     ("b", "Hoàn thành hàn mạch nguồn: kiểm tra đầu ra LM2596 đạt 3,3 V và 7805 đạt 5 V trước khi cắm ESP32 và LCD."),
-    ("b", "Hoàn thành lắp cụm bốn LDR và vách che lên khung pin; chụp ảnh đối chiếu bố trí với sơ đồ."),
+    ("b", "Hoàn thành lắp cụm bốn LDR gá nghiêng β_s lên khung pin; đo lại góc gá và chụp ảnh đối chiếu sơ đồ."),
     ("b", "Hoàn thành lắp trục, gối đỡ, tay đòn motor và biến trở hồi tiếp đồng trục; quay trơn toàn hành trình bằng tay."),
     ("b", "Hoàn thành đấu nối theo sheet ESP32; đo thông mạch từng mạng qt1–qt4, th_thuan/th_nguoc, sda/scl trước khi cấp nguồn."),
     ("b", "Hoàn thành lắp bốn công tắc hành trình và thử liên động trên bench: chạm công tắc chiều nào thì chiều đó bị cấm."),
@@ -328,7 +328,7 @@ LAP_TRINH_CH3 = [
     ("h2", "3.3. Thiết kế cơ khí phục vụ phần mềm"),
     ("b", "Biến trở hồi tiếp gắn đồng trục để góc đọc được tuyến tính theo hành trình; code nội suy ba điểm hiệu chuẩn."),
     ("b", "Bốn công tắc hành trình bố trí sao cho vùng chạm nằm ngoài vùng làm việc 2°, code dùng làm giới hạn cứng."),
-    ("b", "Vách che LDR cố định vĩnh viễn sau hiệu chuẩn để hệ số K_cal không đổi giữa các lần chạy."),
+    ("b", "Giá gá nghiêng β_s của bốn LDR cố định vĩnh viễn sau hiệu chuẩn để hệ số K_cal không đổi giữa các lần chạy."),
     ("h2", "3.4. Hiệu chuẩn và đo đạc"),
     ("b", "Hoàn thành hiệu chuẩn K_cal bốn kênh LDR dưới trời mây sáng đều; sai lệch bốn kênh sau hiệu chuẩn dưới 2%."),
     ("b", "Hoàn thành hiệu chuẩn biến trở ba điểm; sai số góc suy ra so với thước đo góc ≤ 1,5°."),
@@ -496,3 +496,41 @@ LAP_TRINH_CH4 = [
     ("b", "Tinh chỉnh ngưỡng e1 và thời gian bước chạy motor để giảm số lần khởi động motor."),
     ("b", "Mở rộng code sang bản hai trục: thêm e2, cặp motor thứ hai và thứ tự chỉnh nghiêng trước – quay sau."),
 ]
+
+# ---------- lien ket giua cac quyen (bo sung) ----------
+NGHIEN_CUU_CH3.extend([
+    ("h2", "3.6. Các nội dung sẽ triển khai ở quyển chế tạo và quyển lập trình"),
+    ("b", "Quyển chế tạo: thi công mạch điều khiển và mạch động lực đúng bảy sheet EasyEDA đã duyệt (khối ESP32, cầu H bốn TIP41C, opto PC817, nguồn LM2596/7805, DS1307, LCD I2C 1602, công tắc hành trình); chế tạo trục quay, gối đỡ và giá gá bốn LDR nghiêng β_s = 30°; lắp ráp, hiệu chuẩn và đo đạc theo đúng bộ tham số ở mục 3.2–3.3."),
+    ("b", "Quyển chế tạo: tính chọn động cơ gạt nước cho tấm pin 100 W – 4 kg theo mô-men gió, kèm quy tắc đưa tấm pin về vị trí nghỉ khi gió vượt 8 m/s như đã nêu ở kết quả mô phỏng."),
+    ("b", "Quyển lập trình: hiện thực đủ ba nhánh hybrid (thiên văn 30 phút, LDR 2 phút, giữ vị trí khi S < S_min); đọc ADC có lọc mẫu và hệ số K_cal; điều khiển cầu H tích cực thấp qua opto; đọc DS1307 và hiển thị LCD I2C; đọc biến trở suy ra góc tấm pin; vẽ lưu đồ từng phần và lưu đồ tổng quát; viết code mẫu hoàn chỉnh."),
+    ("b", "Cả hai quyển dùng ma trận tính toán (α, γ) theo giờ ở chương 4 làm bảng kiểm tra chéo đầu ra của khối thiên văn khi chạy thử không tải."),
+])
+CHE_TAO_CH1.extend([
+    ("h2", "1.5. Tổng hợp các kết quả tiếp nhận từ quyển nghiên cứu"),
+    ("tbl", [
+        ["Nội dung đã chốt ở quyển nghiên cứu", "Giá trị", "Áp dụng trong quyển chế tạo"],
+        ["Phương pháp điều khiển", "Hybrid: thiên văn định vị thô + LDR tinh chỉnh + giữ vị trí theo lịch khi mây mù", "Nguyên lý mục 1.1 và sơ đồ khối mục 1.2."],
+        ["Ngưỡng phát lệnh", "|e| > 200 mức ADC (lệch khoảng 4°)", "Chọn mạch chia áp và dải đo cho kênh LDR."],
+        ["Vùng chết dừng motor", "120 mức ADC", "Cài đặt liên động và chu kỳ kiểm tra."],
+        ["Ngưỡng mây mù S_min", "Tổng 4 kênh < 2500", "Nhánh giữ vị trí, không thêm cảm biến thời tiết."],
+        ["Góc gá cảm biến", "β_s = 30°, chỉ nghiêng quang trở, không vách ngăn", "Giá gá bốn LDR và đồ gá hiệu chuẩn."],
+        ["So sánh ba luật", "Hybrid sai số trung bình 2,9°, 83 lần chạy motor/ngày", "Căn cứ chọn motor, cầu H và chu kỳ cơ khí."],
+        ["Lợi ích năng lượng", "Một trục +47…259%; hai trục +50…351% so tấm cố định", "Quy mô khung, trục, đối trọng."],
+        ["Ma trận (α, γ) theo giờ", "Chương 4 quyển nghiên cứu", "Bảng kiểm tra chéo góc đặt khi thử không tải."],
+    ], "{B}. Các kết quả tiếp nhận từ quyển nghiên cứu và cách áp dụng"),
+])
+LAP_TRINH_CH2.extend([
+    ("h2", "2.5. Các tham số và kết quả kế thừa từ quyển nghiên cứu"),
+    ("tbl", [
+        ["Đại lượng", "Giá trị chốt trong quyển nghiên cứu", "Dùng trong code"],
+        ["Chu kỳ nhánh thiên văn", "30 phút", "Hằng số T_TV = 1800000 ms."],
+        ["Chu kỳ nhánh LDR", "2 phút", "Hằng số T_LDR = 120000 ms."],
+        ["Ngưỡng phát lệnh", "|e| > 200 mức ADC", "Hằng số NGUONG trong lệnh so sánh."],
+        ["Vùng chết", "120 mức ADC", "Điều kiện dừng motor, chống săn lệnh."],
+        ["Ngưỡng mây mù S_min", "2500 (tổng bốn kênh)", "Nhánh giữ vị trí theo lịch thiên văn."],
+        ["Góc gá cảm biến β_s", "30°, chỉ nghiêng quang trở", "Cơ sở hiệu chuẩn K_cal và giải thích đáp ứng kênh."],
+        ["Sai số luật hybrid", "2,9° trung bình; 83 lần chạy motor/ngày", "Mốc so sánh khi đo thử ngoài trời."],
+        ["Ma trận (α, γ) theo giờ", "Chương 4 quyển nghiên cứu", "Bảng đối chiếu đầu ra hàm thiên văn."],
+        ["Chuẩn hóa γ trưa hạ chí", "Bước nhảy 180° tại vĩ độ 20,93°", "Hàm gocThienVan() trong code mẫu."],
+    ], "{B}. Tham số kế thừa từ quyển nghiên cứu đưa vào chương trình"),
+])

@@ -13,9 +13,10 @@ CHƯƠNG, tuần báo cáo **5/10 – 10/10/2026**:
 - **Nhóm 1 – vòng hở thiên văn**: δ = 23,45°·sin[360°·(284+n)/365]; H = 15°·(t−12);
   sin α = sin φ·sin δ + cos φ·cos δ·cos H; γ tính từ (α, δ, φ). Đọc ngày giờ từ
   **DS1307** để định vị thô mỗi 30 phút.
-- **Nhóm 2 – vòng kín LDR**: 4 LDR ở 4 góc có vách che giữa;
-  e1 = ADC(trái) − ADC(phải), e2 = ADC(trên) − ADC(dưới); |e| > ngưỡng thì quay
-  motor theo dấu e, ngược lại dừng (vùng chết chống dao động).
+- **Nhóm 2 – vòng kín LDR**: 4 LDR ở 4 góc, **chỉ gá nghiêng quang trở một góc
+  β_s = 30°, không dùng vách ngăn**; e1 = ADC(trái) − ADC(phải),
+  e2 = ADC(trên) − ADC(dưới); |e| > ngưỡng thì quay motor theo dấu e, ngược lại
+  dừng (vùng chết chống dao động).
 - **Nhóm 3 – hybrid (lựa chọn)**: thiên văn định vị thô buổi sáng và mỗi chu kỳ,
   LDR tinh chỉnh khi gần đúng, trời nhiều mây thì giữ vị trí theo lịch.
 
@@ -50,6 +51,9 @@ python3 tools/build_bao_cao.py # 6 file Word
 python3 tools/xuat_pdf.py      # 6 PDF riêng + 1 PDF gộp
 ```
 
+- Các quyển chế tạo và lập trình đều có bảng **kết quả tiếp nhận / tham số kế thừa
+  từ quyển nghiên cứu**; quyển nghiên cứu có mục 3.6 vạch ra các việc sẽ triển khai
+  ở quyển chế tạo và quyển lập trình.
 - `tools/trich_xuat.py`: trích nguyên văn Chương 1–2 của hai bản Word gốc cho
   quyển nghiên cứu (riêng mục 2.4/2.5 và 2.9 được thay bằng nội dung hybrid),
   ghép nội dung mới từ `tools/noi_dung_moi_{1,2}_truc.py`, đánh số Hình/Bảng.

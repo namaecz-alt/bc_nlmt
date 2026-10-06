@@ -116,7 +116,7 @@ PATCHES_1 = [
      "Maxim Integrated, DS1307 64 x 8, Serial I2C Real-Time Clock, Datasheet."),
     # Bang khoi chuong 1 va tai lieu tham khao: bo BH1750/Mega khoi cau hinh
     ("4 LDR tại 4 góc, gá nghiêng hướng ra ngoài; BH1750 tham chiếu.",
-     "4 LDR tại 4 góc, gá nghiêng β_s = 30° hướng ra ngoài; vách che chữ thập giữa cụm."),
+     "4 LDR tại 4 góc, gá nghiêng β_s = 30° hướng ra ngoài, không dùng vách ngăn."),
     ("Cơ cấu chấp hành phù hợp tải + công tắc hành trình.",
      "Động cơ gạt nước trục vít phù hợp tải + công tắc hành trình."),
     ("Đo U, I pin và điện năng actuator.",
