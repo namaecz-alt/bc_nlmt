@@ -99,7 +99,7 @@ def patch(blocks, pairs):
 PATCHES_1 = [
     # Chuong 1: cau hinh chot theo phan cung moi
     ("cấu hình tham khảo gồm ESP32, BH1750 làm kênh tham chiếu, đồng hồ thời gian thực và một cơ cấu chấp hành có giới hạn hành trình",
-     "cấu hình tham khảo gồm ESP32, module ADS1115 đo điện áp – dòng điện, đồng hồ thời gian thực và một động cơ gạt nước trục vít có giới hạn hành trình"),
+     "cấu hình tham khảo gồm ESP32, mạch chia áp đo điện áp tấm pin, module thời gian thực DS1307 và một động cơ gạt nước trục vít có giới hạn hành trình"),
     ("Thiết kế cụm bốn LDR, ESP32, cơ cấu chấp hành một trục, bảo vệ hành trình, đo công suất tấm pin, RTC và lưu dữ liệu.",
      "Thiết kế cụm bốn LDR, ESP32, động cơ gạt nước trục vít một trục, biến trở hồi tiếp góc, bảo vệ hành trình, đo công suất tấm pin, RTC và lưu dữ liệu."),
     # Chuong 2: bo dem buoc theo thoi gian -> ma tran suy goc; RTC chi de ghi nhan
@@ -109,9 +109,14 @@ PATCHES_1 = [
      "Phương án chốt cho một trục là đọc ma trận 4 LDR, suy ra góc cần quay, có vùng chết 3° và chế độ giữ vị trí khi tín hiệu kém."),
     ("với mô hình một trục, phương án lai thiên văn-LDR có vùng chết và chế độ giữ vị trí khi tín hiệu kém là lựa chọn đề xuất",
      "với mô hình một trục, phương pháp ma trận 4 LDR suy ra góc cần quay, có vùng chết 3° và chế độ giữ vị trí khi tín hiệu kém, là lựa chọn chốt"),
+    ("ESP32 + RTC DS3231.", "ESP32 + RTC DS1307."),
+    ("https://www.analog.com/media/en/technical-documentation/data-sheets/DS3231.pdf",
+     "https://www.analog.com/media/en/technical-documentation/data-sheets/DS1307.pdf"),
+    ("Analog Devices, DS3231 Extremely Accurate I²C-Integrated RTC/TCXO/Crystal, Datasheet.",
+     "Maxim Integrated, DS1307 64 x 8, Serial I2C Real-Time Clock, Datasheet."),
     # Bang khoi chuong 1 va tai lieu tham khao: bo BH1750/Mega khoi cau hinh
     ("4 LDR tại 4 góc, gá nghiêng hướng ra ngoài; BH1750 tham chiếu.",
-     "4 LDR tại 4 góc, gá nghiêng β_s = 30° hướng ra ngoài; ADS1115 đo U–I."),
+     "4 LDR tại 4 góc, gá nghiêng β_s = 30° hướng ra ngoài; vách che chữ thập giữa cụm."),
     ("Cơ cấu chấp hành phù hợp tải + công tắc hành trình.",
      "Động cơ gạt nước trục vít phù hợp tải + công tắc hành trình."),
     ("Đo U, I pin và điện năng actuator.",
@@ -119,14 +124,14 @@ PATCHES_1 = [
     ("[9] Arduino, Arduino Mega 2560 Rev3 - Technical Specifications. https://docs.arduino.cc/hardware/mega-2560/",
      "[9] Espressif Systems, ESP32-DevKitC General Purpose Development Board User Guide. https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32/esp32-devkitc/index.html"),
     ("[10] ROHM Semiconductor, BH1750FVI Digital 16-bit Serial Output Type Ambient Light Sensor IC, Datasheet.",
-     "[10] Texas Instruments, ADS1115 Ultra-Small, Low-Power, I2C-Based, 860-SPS, 16-Bit ADC, Datasheet. https://www.ti.com/lit/ds/symlink/ads1115.pdf"),
+     "[10] NXP Semiconductors, PCF8574 Remote 8-bit I/O Expander for I2C-bus (mạch kèm LCD 1602), Datasheet."),
 ]
 
 PATCHES_2 = [
     ("Arduino Mega tính sai lệch quang, đặt góc cho servo phương vị và điều khiển động cơ giảm tốc có encoder để chỉnh độ nghiêng; công tắc hành trình giới hạn chuyển động.",
      "ESP32 tính sai lệch quang theo ma trận bốn LDR, suy ra góc đích cho hai động cơ gạt nước trục vít ở cả phương vị và độ nghiêng, hồi tiếp góc bằng biến trở xoay; công tắc hành trình giới hạn chuyển động."),
     ("Thuật toán đề xuất không cần tính góc đặt thiên văn trong vòng điều khiển chính: bộ điều khiển so sánh các cặp LDR, dịch chuyển từng bước về phía có điện trở nhỏ hơn, dừng khi sai lệch nằm trong ngưỡng và định kỳ đọc lại để hiệu chỉnh.",
-     "Thuật toán chốt không cần tính góc đặt thiên văn trong vòng điều khiển chính: bộ điều khiển đọc ma trận bốn LDR, suy ra góc cần quay bằng quan hệ lượng giác, quay trực tiếp tới góc đích theo hồi tiếp biến trở và định kỳ đọc lại để hiệu chỉnh."),
+     "Thuật toán của đề tài không cần tính góc đặt thiên văn trong vòng điều khiển chính: bộ điều khiển đọc ma trận bốn LDR, suy ra góc cần quay bằng quan hệ lượng giác, quay trực tiếp tới góc đích theo hồi tiếp biến trở và định kỳ đọc lại để hiệu chỉnh."),
     ("Đề xuất cụm bốn LDR, Arduino Mega, servo vị trí cho phương vị, động cơ DC giảm tốc có encoder cho độ nghiêng, RTC và công tắc hành trình.",
      "Đề xuất cụm bốn LDR, ESP32, hai động cơ gạt nước trục vít cho phương vị và độ nghiêng, hai biến trở hồi tiếp góc, RTC và công tắc hành trình."),
     ("Xây dựng quy tắc so sánh hai cặp LDR chéo, xác định phía có điện trở nhỏ hơn, điều khiển cơ cấu theo bước và đọc lại sau thời gian đặt trước.",
@@ -162,11 +167,16 @@ PATCHES_2 = [
     ("Việc lựa chọn ngưỡng cân bằng và bước dịch chuyển cần cân bằng giữa độ nhạy, rung cơ cấu, thời gian đáp ứng và độ bền.",
      "Việc lựa chọn vùng chết và ngưỡng phát lệnh cần cân bằng giữa độ nhạy, rung cơ cấu, thời gian đáp ứng và độ bền."),
     # Bang khoi chuong 1
-    ("Arduino Mega + RTC DS3231.", "ESP32 + RTC DS3231."),
+    ("Arduino Mega + RTC DS3231.", "ESP32 + RTC DS1307."),
     ("Servo vị trí + nguồn riêng.", "Motor gạt nước trục vít + nguồn 12 V riêng."),
     ("Quay tấm pin trái/phải theo góc đặt.", "Quay tấm pin trái/phải tới góc đích theo hồi tiếp biến trở."),
     ("Motor DC giảm tốc + encoder + cầu H.", "Motor gạt nước trục vít + relay/cầu H."),
     ("Đo U/I PV và điện năng hai cơ cấu.", "Đo U/I PV và điện năng hai động cơ gạt nước."),
+    # Tai lieu tham khao: DS3231 -> DS1307 dung theo mach thuc te
+    ("https://www.analog.com/media/en/technical-documentation/data-sheets/DS3231.pdf",
+     "https://www.analog.com/media/en/technical-documentation/data-sheets/DS1307.pdf"),
+    ("Analog Devices, DS3231 Extremely Accurate I²C-Integrated RTC/TCXO/Crystal, Datasheet.",
+     "Maxim Integrated, DS1307 64 x 8, Serial I2C Real-Time Clock, Datasheet."),
     # Tai lieu tham khao: [8] tro thanh datasheet ESP32 (duoc trich dan trong muc 2.4 moi)
     ("[8] Arduino, Arduino Mega 2560 Rev3 - Technical Specifications. https://docs.arduino.cc/hardware/mega-2560/",
      "[8] Espressif Systems, ESP32 Series Datasheet. https://www.espressif.com/sites/default/files/documentation/esp32_datasheet_en.pdf"),
@@ -210,6 +220,7 @@ def compose(report):
     ch2 = cut(base, "CHƯƠNG 2", "CHƯƠNG 3")
     refs = cut(base, "TÀI LIỆU THAM KHẢO")
     ch2 = replace_section(ch2, "2.4.", "2.6.", moi.NEW_24_25)
+    ch2 = replace_section(ch2, "2.9.", "2.10.", moi.NEW_29)
     pairs = PATCHES_1 if report == 1 else PATCHES_2
     ch2 = patch(ch2, pairs)
     ch1 = patch(ch1, pairs)

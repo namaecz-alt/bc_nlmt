@@ -21,8 +21,13 @@ WIDTHS = {
     "so_do_ket_noi_1_truc.png": 16.0, "so_do_ket_noi_2_truc.png": 16.0,
     "mo_hinh_co_khi_1_truc.png": 15.0, "mo_hinh_co_khi_2_truc.png": 15.0,
     "bo_tri_4_ldr.png": 15.5, "so_do_khoi_chuong_trinh.png": 16.0,
-    "luu_do_ma_tran_1_truc.png": 11.5, "luu_do_ma_tran_2_truc.png": 11.5,
-    "ket_qua_mo_phong_1_truc.png": 16.0,
+    "ket_qua_mo_phong_1_truc.png": 15.5, "ket_qua_nang_luong.png": 15.5,
+    "luu_do_tong_quat.png": 11.5, "luu_do_thien_van.png": 10.5,
+    "luu_do_ldr.png": 10.5, "luu_do_dong_co.png": 10.5, "luu_do_hien_thi.png": 10.5,
+    "mach_dong_luc_cau_h_tip41c.png": 15.0, "mach_opto_pc817.png": 14.5,
+    "mach_cong_tac_hanh_trinh.png": 15.0, "mach_esp32_devkit.png": 13.5,
+    "mach_nguon_lm2596.png": 15.0, "mach_7805_lcd_i2c.png": 15.0,
+    "mach_ds1307.png": 13.5,
 }
 
 
@@ -74,6 +79,9 @@ def add_block(doc, block, code_style):
         fname = os.path.basename(block[1])
         w = WIDTHS.get(fname, 15.0)
         full = os.path.join(ROOT, block[1])
+        if not os.path.exists(full):
+            print("!! thieu anh:", block[1])
+            return
         p = doc.add_paragraph(style="Normal")
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
         p.paragraph_format.first_line_indent = Cm(0)
