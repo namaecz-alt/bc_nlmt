@@ -58,14 +58,14 @@ S = {}
 
 
 def make_styles():
-    S["body"] = ParagraphStyle("body", fontName="Ser", fontSize=12, leading=15.5,
+    S["body"] = ParagraphStyle("body", fontName="Ser", fontSize=13, leading=17,
                                alignment=TA_JUSTIFY, firstLineIndent=1.0 * cm,
                                spaceAfter=6)
-    S["h1"] = ParagraphStyle("h1", fontName="Ser-B", fontSize=14, leading=18,
+    S["h1"] = ParagraphStyle("h1", fontName="Ser-B", fontSize=16, leading=20,
                              alignment=TA_CENTER, spaceBefore=6, spaceAfter=12)
-    S["h2"] = ParagraphStyle("h2", fontName="Ser-B", fontSize=13, leading=16.5,
+    S["h2"] = ParagraphStyle("h2", fontName="Ser-B", fontSize=16, leading=20,
                              spaceBefore=10, spaceAfter=6)
-    S["h3"] = ParagraphStyle("h3", fontName="Ser-B", fontSize=12, leading=15,
+    S["h3"] = ParagraphStyle("h3", fontName="Ser-B", fontSize=14, leading=18,
                              spaceBefore=8, spaceAfter=4)
     S["bullet"] = ParagraphStyle("bullet", parent=S["body"], firstLineIndent=0,
                                  leftIndent=0.9 * cm, bulletIndent=0.25 * cm,
@@ -73,11 +73,11 @@ def make_styles():
     S["eq"] = ParagraphStyle("eq", parent=S["body"], alignment=TA_CENTER,
                              firstLineIndent=0, fontName="Ser-I", spaceBefore=2,
                              spaceAfter=6)
-    S["cap"] = ParagraphStyle("cap", fontName="Ser-I", fontSize=10.5, leading=13,
+    S["cap"] = ParagraphStyle("cap", fontName="Ser-I", fontSize=12, leading=15,
                               alignment=TA_CENTER, spaceBefore=4, spaceAfter=10)
-    S["tcap"] = ParagraphStyle("tcap", fontName="Ser-B", fontSize=10.5, leading=13,
+    S["tcap"] = ParagraphStyle("tcap", fontName="Ser-B", fontSize=12, leading=15,
                                alignment=TA_CENTER, spaceBefore=6, spaceAfter=4)
-    S["cell"] = ParagraphStyle("cell", fontName="Ser", fontSize=9.5, leading=12)
+    S["cell"] = ParagraphStyle("cell", fontName="Ser", fontSize=11, leading=14)
     S["cellb"] = ParagraphStyle("cellb", parent=S["cell"], fontName="Ser-B")
     S["cover"] = ParagraphStyle("cover", fontName="Ser-B", fontSize=15, leading=21,
                                 alignment=TA_CENTER, spaceAfter=10)
