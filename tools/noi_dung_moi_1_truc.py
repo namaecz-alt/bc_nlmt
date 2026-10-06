@@ -1,438 +1,498 @@
 # -*- coding: utf-8 -*-
-"""Noi dung moi ban 1 truc – phuong phap LAI thien van + LDR,
-phan cung: ESP32 DevKit, cau H 4 TIP41C cach ly opto PC817, DS1307,
-LCD I2C 1602, nguon LM2596/7805. Tien do tuan 5/10 - 10/10/2026."""
+"""Noi dung moi ban 1 truc – phuong phap HYBRID (thien van + LDR),
+phan cung that: ESP32 DevKit, DS1307, LCD I2C 1602, cau H 4 TIP41C,
+motor gat nuoc, tam pin 100 W – 4 kg. Tien do tuan 5/10 - 10/10/2026."""
 
-# ---------- thay muc 2.4 va 2.5 ban goc ----------
+MACH = "hinh_ve/mach/"
+
+# ---------- thay muc 2.4 / 2.5 ban goc ----------
 NEW_24_25 = [
     ("h2", "2.4. Bộ điều khiển ESP32 DevKit và các khối phụ trợ"),
-    ("p", "ESP32 DevKit (Xtensa LX6 hai nhân 240 MHz, 4 MB flash) là vi điều khiển duy nhất của mô hình. Hệ không dùng WiFi khi vận hành nên cả tám kênh ADC1 lẫn mười kênh ADC2 đều dùng được cho bốn kênh LDR, biến trở hồi tiếp và cầu chia áp đo điện áp tấm pin; báo cáo chỉ đo điện áp, chưa đo dòng điện. Hai chân GPIO21/GPIO22 nối bus I²C chung cho module thời gian thực DS1307 và màn hình LCD I²C 1602; GPIO19/GPIO18 là hai chân lệnh th_thuan/th_nguoc đưa xuống mạch cách ly opto; GPIO34, 35, 32, 33 đọc bốn công tắc hành trình qt1…qt4."),
-    ("p", "Module DS1307 giữ giờ thực kể cả khi mất điện nhờ pin nuôi, cấp dữ liệu ngày–giờ cho nhánh tính thiên văn; màn hình LCD I²C 1602 hiển thị giờ đọc được, góc lệnh, góc thực tế và trạng thái để người vận hành quan sát trực tiếp mà không cần máy tính."),
-    ("h2", "2.5. Mạch động lực cầu H TIP41C cách ly opto và động cơ trục vít"),
-    ("p", "Động cơ chấp hành là động cơ gạt nước ô tô 12 V kèm hộp giảm tốc trục vít – bánh vít: cặp trục vít tự hãm nên khi ngắt lệnh tấm pin tự giữ vị trí dưới gió và trọng lượng bản thân, không cần nuôi điện giữ. Mạch động lực dùng cầu H ghép từ bốn transistor TIP41C (U1…U4) với bốn diode bảo vệ chống sức điện động ngược khi ngắt dòng; hai tín hiệu dkxuoi/dknguoc đi qua opto PC817 (PH1, PH2) kèm điện trở 220 Ω để cách ly hoàn toàn khối logic 3,3 V với khối công suất 12 V."),
-    ("p", "Opto đấu theo kiểu mức thấp tác động: chân lệnh ESP32 xuống 0 thì LED opto sáng, transistor quang dẫn và mở cầu H chiều tương ứng; cả hai chân lệnh ở mức 1 thì cầu H khóa. Vì vậy ngay trong setup() chương trình đưa hai chân lệnh lên mức cao trước khi vào vòng lặp để tránh xung lệnh lúc khởi động. Nguồn 12 V vào qua diode 1N4007 chống ngược cực, nhánh LM2596 hạ xuống 3,3 V nuôi ESP32 và nhánh 7805 hạ xuống 5 V nuôi LCD, DS1307."),
+    ("p", "Bộ điều khiển trung tâm là module ESP32 DevKit. Bo có hai nhóm ADC 12 bit: ADC1 (GPIO36, 39, 32, 33...) và ADC2 (GPIO25, 26, 27, 14...); nhóm ADC2 chỉ xung đột khi bật WiFi, còn đề tài không dùng WiFi nên cả sáu kênh đo tương tự đều dùng được. Trong thiết kế đã vẽ, bốn kênh LDR đưa vào GPIO25/26/27/14, biến trở hồi tiếp góc vào GPIO36 và điện áp tấm pin (qua cầu chia) vào GPIO39; ADC của ESP32 chỉ đo điện áp 0–3,3 V nên không đo dòng điện trong phiên bản này."),
+    ("p", "Thời gian thực dùng module DS1307 (I²C địa chỉ 0x68, có pin nuôi) để cấp ngày và giờ cho khối thiên văn; hiển thị dùng màn hình LCD 1602 kèm mạch chuyển I²C PCF8574 (địa chỉ 0x27), chung bus SDA/SCL (GPIO21/22) với DS1307. Nguồn 12 V qua diode chống ngược cực 1N4007, hạ áp LM2596 cấp 3,3 V cho ESP32 và nhánh 7805 riêng cấp 5 V cho LCD, DS1307."),
+    ("h2", "2.5. Động cơ gạt nước ô tô và mạch động lực cầu H bốn TIP41C"),
+    ("p", "Cơ cấu chấp hành là động cơ gạt nước kính ô tô 12 V kèm hộp giảm tốc trục vít – bánh vít. Ưu điểm quyết định là cặp trục vít tự hãm: khi ngắt lệnh hoặc mất điện, trục không bị kéo quay ngược nên tấm pin tự giữ vị trí dưới gió và trọng lượng bản thân mà không cần nuôi điện giữ; mô-men của motor đủ cho tấm pin 100 W nặng khoảng 4 kg ở gió vừa phải, giá thành thấp và sẵn có."),
+    ("p", "Mạch động lực đảo chiều dùng cầu H ghép từ bốn transistor công suất TIP41C (NPN, 6 A, 100 V, vỏ TO-220), mỗi chân bazơ nối qua điện trở 10 k và có diode bảo vệ trả xung ngược về nguồn 12 V và mass. Hai tín hiệu điều khiển dkxuoi/dknguoc đi qua opto PC817 cách ly giữa mass 3,3 V và mass 12 V: chân lệnh ESP32 mức thấp làm sáng LED opto và kéo tín hiệu xuống mass 12 V; theo nguyên lý cầu H, dkxuoi = 0 cho cặp chéo trái dẫn, dknguoc = 0 cho cặp chéo phải dẫn, cả hai bằng 1 thì cầu H khóa và motor tự giữ."),
 ]
 
-# ---------- thay toan bo muc 2.9 ban goc: chi con 3 phuong phap ----------
+# ---------- thay muc 2.9 ban goc: chi con 3 phuong phap ----------
 NEW_29 = [
-    ("h2", "2.9. Các phương pháp bám nắng khảo sát"),
-    ("p", "Đề tài khảo sát ba nhóm phương pháp điều khiển bám nắng phổ biến nhất cho tấm pin quang điện và chọn phương pháp lai làm phương án thực hiện."),
-    ("h3", "2.9.1. Phương pháp bám theo cảm biến quang trở (vòng kín)"),
-    ("p", "Bốn quang trở LDR đặt ở bốn góc tấm pin, giữa cụm có vách che chữ thập tạo bóng chênh lệch khi lệch hướng. Gọi tín hiệu ADC của bốn kênh là L_trái, L_phải, L_trên, L_dưới, bộ điều khiển tính:"),
-    ("eq", "e1 = ADC(LDR_trái) − ADC(LDR_phải);   e2 = ADC(LDR_trên) − ADC(LDR_dưới)"),
-    ("p", "Luật điều khiển: nếu |e1| lớn hơn ngưỡng thì quay động cơ trục 1 theo dấu e1; nếu |e2| lớn hơn ngưỡng thì quay động cơ trục 2 theo dấu e2; ngược lại dừng. Khoảng ngưỡng chính là vùng chết chống dao động quanh vị trí cân bằng."),
-    ("b", "Ưu điểm: đơn giản, rẻ, phản ứng theo điều kiện sáng thực tế, không cần tọa độ và đồng hồ chính xác."),
-    ("b", "Nhược điểm: nhạy với mây, bóng râm và bóng che tạm thời; khi trời mờ đều bốn kênh gần bằng nhau thì hệ mất phương hướng và đứng yên trong khi Mặt Trời vẫn di chuyển."),
-    ("h3", "2.9.2. Phương pháp bám theo thời gian (vòng hở thiên văn)"),
-    ("p", "Vị trí Mặt Trời được tính từ vị trí địa lý, ngày và giờ thực đọc từ module RTC DS1307. Với n là ngày trong năm, t là giờ Mặt Trời, φ là vĩ độ nơi lắp đặt:"),
-    ("eq", "δ = 23,45° · sin[360° · (284 + n)/365]"),
+    ("h2", "2.9. Ba phương pháp bám nắng xem xét trong đề tài"),
+    ("h3", "2.9.1. Nhóm 1 – Vòng hở theo thời gian (thuật toán thiên văn)"),
+    ("p", "Nhóm này tính vị trí Mặt Trời từ vị trí địa lý, ngày và giờ đọc từ module thời gian thực DS1307, không cần cảm biến ánh sáng. Góc khai thiên (xích vĩ) tính theo ngày trong năm:"),
+    ("eq", "δ = 23,45° · sin[360°·(284 + n)/365]"),
+    ("p", "Góc giờ tính từ giờ Mặt Trời t (giờ):"),
     ("eq", "H = 15° · (t − 12)"),
+    ("p", "Góc cao Mặt Trời α suy ra từ vĩ độ nơi lắp đặt φ:"),
     ("eq", "sin α = sin φ · sin δ + cos φ · cos δ · cos H"),
-    ("p", "Góc phương vị γ tính từ α, δ, φ bằng công thức lượng giác cầu; từ α và γ suy ra góc lệnh cho trục quay của tấm pin. Vòng hở không dò tìm nên chuyển động mượt, không dao động."),
-    ("b", "Ưu điểm: ổn định, không phụ thuộc thời tiết, không dao động; làm việc được cả khi mây dày."),
-    ("b", "Nhược điểm: cần cài đặt đúng tọa độ và giờ; sai số lắp đặt, sai số đồng hồ không tự sửa được nên lệch vẫn hoàn lệch."),
-    ("h3", "2.9.3. Phương pháp lai quang trở – thiên văn (lựa chọn của đề tài)"),
-    ("b", "Thiên văn định vị thô: mỗi chu kỳ đọc DS1307, tính góc thiên văn; nếu góc lệnh lệch góc hiện tại quá 5° thì chạy motor theo lịch để kéo tấm pin về gần Mặt Trời, kể cả buổi sáng sớm hoặc sau khoảng mây dài."),
-    ("b", "LDR tinh chỉnh: khi tổng sáng bốn kênh vượt ngưỡng nắng, sai lệch e1 (và e2 với bản hai trục) được dùng để tinh chỉnh motor từng bước nhỏ về phía nhận sáng mạnh hơn, bù sai số lắp đặt và sai số đồng hồ mà vòng hở không tự sửa được."),
-    ("b", "Trời nhiều mây: tổng sáng dưới ngưỡng thì bỏ qua LDR, giữ vị trí theo lịch thiên văn để tránh dao động vô ích; hết mây hệ tự tinh chỉnh trở lại."),
-    ("p", "Phương pháp lai kế thừa ưu điểm của cả hai nhánh: bám sát khi nắng đẹp nhờ vòng kín, không lạc hướng khi mây nhờ vòng hở, nên được chọn làm phương pháp điều khiển của đề tài; kết quả mô phỏng so sánh ba phương pháp trình bày ở Chương 3."),
+    ("p", "Góc phương vị γ tính tiếp từ α, δ và φ. Biết (α, γ) là đổi được ra góc đặt của tấm pin cho từng trục."),
+    ("b", "Ưu điểm: ổn định, không phụ thuộc thời tiết, không dao động quanh vị trí cân bằng."),
+    ("b", "Nhược điểm: phải cài đúng tọa độ và giờ; không tự sửa được sai số do lắp đặt lệch hoặc khớp cơ khí rơ."),
+    ("h3", "2.9.2. Nhóm 2 – Vòng kín dùng cảm biến quang trở (LDR)"),
+    ("p", "Bốn LDR đặt ở bốn góc tấm pin, giữa có vách che tạo bóng lệch khi nắng xiên. Gọi giá trị đọc được của bốn kênh là trái, phải, trên, dưới, sai lệch điều khiển tính rất đơn giản:"),
+    ("eq", "e1 = ADC(LDR_trái) − ADC(LDR_phải);   e2 = ADC(LDR_trên) − ADC(LDR_dưới)"),
+    ("b", "Nếu |e1| > ngưỡng: quay động cơ trục 1 theo dấu e1; nếu |e2| > ngưỡng: quay động cơ trục 2 theo dấu e2."),
+    ("b", "Ngược lại thì dừng – vùng chết (dead-band) chống dao động quanh vị trí cân bằng."),
+    ("b", "Ưu điểm: đơn giản, rẻ, phản ứng theo điều kiện sáng thực tế, tự sửa sai số lắp đặt."),
+    ("b", "Nhược điểm: nhạy với mây và bóng râm thoáng qua, dễ dao động nếu ngưỡng chọn quá nhỏ, buổi sáng sớm tín hiệu yếu nên bám chậm."),
+    ("h3", "2.9.3. Nhóm 3 – Phương pháp hybrid (kết hợp), phương án lựa chọn"),
+    ("b", "Dùng thiên văn định vị thô: đầu buổi sáng và mỗi chu kỳ 30 phút, tính (α, γ) từ DS1307 rồi đưa nhanh tấm pin về gần vị trí Mặt Trời."),
+    ("b", "Dùng LDR tinh chỉnh: giữa hai lần định vị thô, so sánh e1 (và e2) với ngưỡng để khử phần sai lệch còn lại, kể cả sai số lắp đặt."),
+    ("b", "Khi trời nhiều mây (tổng sáng S nhỏ hơn ngưỡng S_min): giữ nguyên vị trí theo lịch thiên văn, tránh dao động vô ích do mây che thoáng qua."),
+    ("p", "Phương pháp hybrid lấy được ưu điểm của cả hai nhóm: bám nhanh và ổn định như vòng hở, tự sửa sai số như vòng kín, và không săn lệnh khi thời tiết xấu. Vì vậy đề tài chọn nhóm 3 cho cả hai mô hình một trục và hai trục."),
 ]
 
-# ---------- QUYEN NGHIEN CUU: chuong 3 viet lai truc quan ----------
-NGHIEN_CUU_H1_CH3 = "CHƯƠNG 3. KẾT QUẢ NGHIÊN CỨU PHƯƠNG PHÁP LAI BẰNG MÔ PHỎNG"
+# ---------- QUYEN NGHIEN CUU ----------
+NGHIEN_CUU_H1_CH3 = "CHƯƠNG 3. KẾT QUẢ NGHIÊN CỨU PHƯƠNG PHÁP HYBRID BẰNG MÔ PHỎNG"
 NGHIEN_CUU_CH3 = [
-    ("h2", "3.1. Cách hệ lai tính toán trong một chu kỳ"),
-    ("b", "Bước 1 – đọc giờ: lấy ngày, giờ, phút, giây từ DS1307, đổi sang giờ Mặt Trời theo kinh độ 106,06° Đông của Mỹ Hào."),
-    ("b", "Bước 2 – tính góc thiên văn: dùng các công thức δ, H, α, γ của mục 2.9.2 suy ra góc lệnh của trục quay."),
-    ("b", "Bước 3 – so sánh góc hiện tại đọc từ biến trở: lệch trên 5° thì chạy motor theo lịch (định vị thô)."),
-    ("b", "Bước 4 – đọc ma trận 4 LDR: tính tổng sáng S và sai lệch e1; nếu S vượt ngưỡng nắng và |e1| vượt ngưỡng chết thì tinh chỉnh motor theo dấu e1."),
-    ("b", "Bước 5 – hiển thị LCD giờ, góc lệnh, góc thực tế, e1 và chế độ đang chạy; ghi log rồi chờ chu kỳ sau."),
-    ("h2", "3.2. Kết quả của ma trận tính toán LDR"),
-    ("p", "Bảng dưới đây là kết quả chạy ma trận tính toán với cụm LDR gá β_s = 30° có vách che: cột lệch thật là góc lệch đặt bằng giá thử, cột mức ADC là giá trị hai kênh đọc được, cột e1 là sai lệch chuẩn hóa và cột cuối là góc hệ suy ra từ e1. Ma trận cho lại đúng góc đặt trong toàn dải 0–30°, tức phép tinh chỉnh không cần dò thử:"),
+    ("h2", "3.1. Đường đi của Mặt Trời tại địa điểm lắp đặt"),
+    ("p", "Trước khi chọn phương pháp, vị trí Mặt Trời được tính theo đúng các công thức thiên văn của mục 2.9.1 cho bốn ngày đại diện tại Mỹ Hào, Hưng Yên (vĩ độ φ = 20,93° Bắc). Kết quả vẽ thành đồ thị để nhìn trực quan quỹ đạo và độ cao Mặt Trời trong ngày:"),
+    ("img", "hinh_ve/duong_di_mat_troi.png", "{H}. Góc cao và góc phương vị Mặt Trời trong bốn ngày đại diện tại Mỹ Hào"),
+    ("p", "Đồ thị cho thấy ba đặc điểm quyết định thiết kế: giữa trưa hạ chí Mặt Trời lên gần thiên đỉnh (α ≈ 88°) còn đông chí chỉ đạt 46°, nên góc nghiêng thay đổi rất nhiều theo mùa; buổi sáng và chiều góc phương vị đổi nhanh (khoảng 15° mỗi giờ), nên trục quay Đông–Tây phải chỉnh liên tục trong ngày; toàn bộ quỹ đạo đối xứng qua giờ trưa nên lịch thiên văn rất dễ tính và ổn định."),
+    ("h2", "3.2. Ma trận bốn LDR nhìn hướng nắng như thế nào"),
+    ("img", "hinh_ve/bo_tri_4_ldr.png", "{H}. Bốn LDR ở bốn góc tấm pin với vách che giữa tạo bóng lệch"),
+    ("p", "Khi nắng chiếu thẳng góc, vách che giữa che đều và bốn kênh đọc gần bằng nhau, e1 và e2 xấp xỉ 0: tấm pin đang đúng hướng. Khi nắng xiên sang một bên, vách che đổ bóng lên cặp LDR phía kia nên hiệu e1 khác 0 và dấu của e1 chỉ đúng phía cần quay tới. Bảng dưới là ví dụ số đọc được khi Mặt Trời lệch khỏi pháp tuyến tấm pin các góc khác nhau (giá trị ADC 12 bit):"),
     ("tbl", [
-        ["Góc lệch thật", "Kênh phải (mức ADC)", "Kênh trái (mức ADC)", "e1", "Góc suy ra"],
-        ["0°", "1732", "1732", "0,000", "0,0°"],
-        ["3°", "1782", "1677", "+0,030", "+3,0°"],
-        ["6°", "1827", "1618", "+0,061", "+6,0°"],
-        ["10°", "1879", "1532", "+0,102", "+10,0°"],
-        ["15°", "1932", "1414", "+0,155", "+15,0°"],
-        ["20°", "1970", "1286", "+0,210", "+20,0°"],
-        ["30°", "2000", "1000", "+0,333", "+30,0°"],
-    ], "{B}. Kết quả ma trận tính toán LDR: góc suy ra trùng góc lệch thật"),
-    ("p", "Ngưỡng chết được chọn tương ứng e1 = 0,030, tức góc lệch 3°: lệch nhỏ hơn 3° thì motor không chạy để tránh mài mòn; lệch 3° trở lên thì mỗi lần tinh chỉnh đưa tấm pin về đúng hướng chỉ trong một bước."),
-    ("h2", "3.3. Kết quả bám trong ngày nắng"),
-    ("p", "Mô phỏng cả ngày tại Mỹ Hào cho ba phương pháp, tấm pin xuất phát lệch 4° do sai số lắp đặt giả định. Bảng tổng hợp sai số lệch hướng trung bình và số lần motor khởi động:"),
+        ["Góc lệch Mặt Trời – tấm pin", "ADC LDR trái", "ADC LDR phải", "e1 = trái − phải", "Lệnh quay"],
+        ["−20° (lệch Đông)", "3100", "2074", "+1026", "Quay sang trái (về Đông)"],
+        ["−10°", "2968", "2447", "+521", "Quay sang trái (về Đông)"],
+        ["−5°", "2869", "2607", "+262", "Quay sang trái (về Đông)"],
+        ["0° (đúng hướng)", "2748", "2748", "0", "Dừng (trong vùng chết)"],
+        ["+5°", "2607", "2869", "−262", "Quay sang phải (về Tây)"],
+        ["+10°", "2447", "2969", "−521", "Quay sang phải (về Tây)"],
+        ["+20° (lệch Tây)", "2074", "3100", "−1026", "Quay sang phải (về Tây)"],
+    ], "{B}. Ví dụ trực quan: giá trị đọc bốn kênh và lệnh quay tương ứng"),
+    ("p", "Nhìn bảng là thấy ngay cách chọn ngưỡng: lệch khoảng 4° đã cho |e1| cỡ 200 mức ADC, đủ tách khỏi nhiễu; trong vùng chết |e1| dưới ngưỡng thì motor đứng yên, tránh săn lệnh. Trục nghiêng dùng cặp kênh trên–dưới với cùng một cách tính."),
+    ("h2", "3.3. Một ngày làm việc của phương pháp hybrid"),
+    ("p", "Chương trình mô phỏng cho chạy cả ngày 21/3 với một đám mây che từ 10h đến 11h, so sánh ba luật điều khiển: chỉ dùng thiên văn (vòng hở), chỉ dùng LDR (vòng kín) và hybrid. Đồ thị dưới đây là góc tấm pin theo thời gian của luật hybrid so với góc Mặt Trời lý tưởng:"),
+    ("img", "hinh_ve/hoat_dong_hybrid.png", "{H}. Góc tấm pin theo thời gian trong ngày 21/3 của phương pháp hybrid"),
+    ("p", "Đường bậc thang bám sát đường lý tưởng: sáng sớm tấm pin được đưa nhanh về phía Đông theo lịch thiên văn, trong ngày LDR tinh chỉnh từng bậc nhỏ, còn đúng khoảng mây mù 10h–11h thì tấm pin đứng yên giữ vị trí theo lịch thay vì dao động theo mây. Bảng so sánh ba luật trong cùng điều kiện:"),
     ("tbl", [
-        ["Ngày", "Thiên văn: sai số / số lần chạy", "LDR thuần: sai số / số lần chạy", "Lai: sai số / số lần chạy"],
-        ["21/3", "2,6° / 77 lần", "0,8° / 86 lần", "1,2° / 142 lần"],
-        ["21/6", "2,7° / 75 lần", "0,8° / 83 lần", "1,1° / 145 lần"],
-        ["23/9", "2,6° / 77 lần", "0,7° / 86 lần", "1,2° / 142 lần"],
-        ["21/12", "2,6° / 72 lần", "0,8° / 90 lần", "1,3° / 139 lần"],
-    ], "{B}. Sai số bám và số lần chạy motor trong ngày nắng"),
-    ("img", "hinh_ve/ket_qua_mo_phong_1_truc.png", "{H}. Góc tấm pin theo luật lai bám sát góc Mặt Trời lý tưởng ngày 21/6"),
-    ("p", "Ngày nắng, cả LDR thuần và lai đều giữ lệch hướng quanh 1°, riêng thiên văn thuần chịu lệch đều khoảng 2,6° đúng bằng sai số lắp đặt giả định vì vòng hở không tự sửa. Đồ thị cho thấy đường góc tấm pin của luật lai trùm gần kín đường góc Mặt Trời; các khoảng hệ số nắng thấp là lúc mây thoáng, hệ tạm giữ vị trí rồi tinh chỉnh lại ngay khi nắng lại."),
-    ("h2", "3.4. Kết quả khi trời nhiều mây"),
-    ("p", "Kịch bản ngày nhiều mây (phần lớn thời gian tổng sáng dưới ngưỡng nắng) cho thấy khác biệt lớn nhất giữa các phương pháp:"),
-    ("tbl", [
-        ["Ngày", "LDR thuần: sai số / số lần chạy", "Lai: sai số / số lần chạy"],
-        ["21/3", "74,7° / 106 lần", "1,6° / 33 lần"],
-        ["21/6", "69,1° / 123 lần", "1,7° / 31 lần"],
-        ["23/9", "74,9° / 106 lần", "1,6° / 33 lần"],
-        ["21/12", "92,5° / 99 lần", "1,6° / 33 lần"],
-    ], "{B}. Hành vi của LDR thuần và luật lai trong ngày nhiều mây"),
-    ("p", "Trời mờ đều, bốn kênh LDR gần bằng nhau nên nhánh LDR thuần không còn chênh lệch để dò, tấm pin đứng yên trong khi Mặt Trời tiếp tục đi: sai số dồn tới 70–90°. Luật lai nhận biết tổng sáng thấp nên chuyển sang bám lịch thiên văn, sai số chỉ còn 1,6–1,7° và motor chỉ chạy 31–33 lần theo bước lịch. Đây chính là lý do đề tài chọn phương pháp lai."),
-    ("h2", "3.5. Năng lượng thu được so với tấm cố định"),
-    ("p", "Lấy tấm cố định nghiêng 21° hướng Nam làm mốc 100%, năng lượng trực xạ thu được trong ngày của ba phương pháp bám:"),
-    ("tbl", [
-        ["Ngày", "Tấm cố định", "Thiên văn", "LDR thuần", "Lai"],
-        ["21/3", "100%", "246%", "221%", "246%"],
-        ["21/6", "100%", "157%", "144%", "157%"],
-        ["23/9", "100%", "249%", "224%", "249%"],
-        ["21/12", "100%", "479%", "410%", "478%"],
-    ], "{B}. Năng lượng trực xạ trong ngày, tấm cố định = 100%"),
-    ("img", "hinh_ve/ket_qua_nang_luong.png", "{H}. Năng lượng thu được trong ngày so với tấm cố định"),
-    ("p", "Bám nắng giúp thu gấp 1,6 đến 4,8 lần tấm cố định tùy mùa. Luật lai đạt ngang thiên văn vào ngày mây và ngang hoặc nhỉnh hơn LDR thuần vào ngày nắng; tính trung bình cả hai loại ngày, luật lai thu nhiều năng lượng nhất trong ba phương pháp."),
-    ("h2", "3.6. Nhận xét và thông số chính của chương trình"),
-    ("b", "Phương pháp điều khiển: lai thiên văn + LDR như mục 2.9.3; thiên văn định vị thô và giữ lịch khi mây, LDR tinh chỉnh khi nắng."),
-    ("b", "Góc gá cảm biến β_s = 30°, có vách che chữ thập giữa cụm để tăng chênh lệch bóng."),
-    ("b", "Ngưỡng chết nhánh LDR: |e1| = 0,030 (tương đương lệch 3°); ngưỡng nắng của tổng sáng lấy bằng 25% giá trị lúc trưa nắng để nhận biết mây."),
-    ("b", "Bước lịch thiên văn 2°, ngưỡng chuyển chế độ định vị thô 5°; mỗi lần tinh chỉnh LDR đi thẳng góc suy ra từ e1."),
+        ["Luật điều khiển", "Sai số trung bình", "Sai số lớn nhất", "Số lần chạy motor"],
+        ["Chỉ thiên văn (vòng hở, 30 phút/lần)", "4,3°", "19,4°", "22 lần"],
+        ["Chỉ LDR (vòng kín, 2 phút/lần)", "6,3°", "82,3°", "118 lần"],
+        ["Hybrid (thiên văn thô + LDR tinh chỉnh)", "2,9°", "17,9°", "83 lần"],
+    ], "{B}. So sánh ba luật điều khiển trong ngày 21/3 có mây mù"),
+    ("p", "Vòng kín thuần túy kém nhất vì buổi sáng tín hiệu yếu nên bám đuổi chậm (sai số có lúc 82°) và vẫn chạy motor nhiều lần; vòng hở thuần túy ổn định nhưng sai số tích lũy giữa hai lần cập nhật; hybrid nhỏ sai số nhất mà số lần chạy motor vẫn chấp nhận được, nên được chọn triển khai."),
+    ("h2", "3.4. Bám nắng hybrid thu thêm được bao nhiêu điện"),
+    ("p", "Mô phỏng tích phân lượng nắng trực xạ rơi vuông góc lên tấm pin trong cả ngày cho ba cấu hình: tấm cố định nghiêng 21° hướng Nam, tấm bám một trục Đông–Tây và tấm bám hai trục, đều dùng luật hybrid:"),
+    ("img", "hinh_ve/so_sanh_nang_luong.png", "{H}. Phần trăm điện thu thêm so với tấm cố định trong bốn ngày đại diện"),
+    ("p", "Đọc trực tiếp trên đồ thị: bám một trục thu thêm khoảng 47% ngày hạ chí và tới 259% ngày đông chí so với tấm cố định; bám hai trục nhỉnh hơn một trục không đáng kể vào mùa hè nhưng gấp rưỡi thêm vào ngày đông chí (351%). Với mô hình một trục của đồ án 1, phần tăng 47–259% đã đủ chứng minh hiệu quả của thuật toán; mô hình hai trục của đồ án 2 phát huy rõ nhất vào mùa đông."),
+    ("h2", "3.5. Lưu đồ thuật toán tổng quát"),
+    ("img", "hinh_ve/luu_do_tong_quat_1_truc.png", "{H}. Lưu đồ tổng quát chương trình hybrid cho mô hình một trục"),
+    ("p", "Lưu đồ thể hiện đúng ba nhánh của phương pháp hybrid: nhánh thiên văn chạy mỗi 30 phút để định vị thô, nhánh LDR chạy mỗi 2 phút để tinh chỉnh khi nắng đủ mạnh, và nhánh giữ vị trí theo lịch khi tổng sáng sụt dưới ngưỡng S_min. Các lưu đồ chi tiết từng khối (đọc ADC, tính thiên văn, điều khiển motor, hiển thị LCD, đọc biến trở) trình bày ở quyển lập trình, chương 3."),
 ]
-NGHIEN_CUU_H1_CH4 = "CHƯƠNG 4. TIẾN ĐỘ THỰC HIỆN VÀ KẾ HOẠCH TUẦN NÀY"
+NGHIEN_CUU_H1_CH4 = "CHƯƠNG 4. KẾT QUẢ CÔNG VIỆC ĐẠT ĐƯỢC VÀ MA TRẬN TÍNH TOÁN"
 NGHIEN_CUU_CH4 = [
-    ("h2", "4.1. Kết quả đạt được trong tuần 5/10 – 10/10/2026"),
-    ("b", "Hoàn thành ma trận tính toán LDR có vách che: bảng kết quả mục 3.2 cho thấy góc suy ra trùng góc lệch thật từ 0° đến 30°, xác định ngưỡng chết e1 = 0,030."),
-    ("b", "Hoàn thành mô phỏng so sánh ba phương pháp thiên văn / LDR thuần / lai trong ngày nắng và ngày nhiều mây: luật lai giữ sai số 1,1–1,7° trong khi LDR thuần lạc hướng 70–90° khi mây (mục 3.3, 3.4)."),
-    ("b", "Hoàn thành bảng năng lượng so với tấm cố định: bám nắng lai thu 157–478% tùy mùa (mục 3.5)."),
-    ("b", "Hoàn thành lựa chọn phương pháp lai và bộ thông số cho chương trình: β_s = 30°, ngưỡng chết 3°, bước lịch 2°, ngưỡng định vị thô 5°."),
-    ("h2", "4.2. Các công việc còn lại của tuần này (5/10 – 10/10/2026)"),
-    ("b", "Đối chiếu giờ đọc từ DS1307 với giờ Mặt Trời thực tế tại Mỹ Hào, hiệu chỉnh hệ số kinh độ trong code."),
-    ("b", "Đo kiểm chứng vách che chữ thập: che từng phía và ghi lại e1 để xác nhận dấu lệnh đúng."),
-    ("b", "Gửi quyển nghiên cứu xin góp ý của giảng viên hướng dẫn và chỉnh sửa theo nhận xét."),
+    ("h2", "4.1. Các công việc đã hoàn thành trong tuần 5/10 – 10/10/2026"),
+    ("b", "Hoàn thành lựa chọn phương pháp điều khiển hybrid: thiên văn định vị thô theo giờ DS1307, LDR tinh chỉnh theo ngưỡng và vùng chết, giữ vị trí theo lịch khi mây mù."),
+    ("b", "Hoàn thành mô phỏng kiểm chứng: so sánh ba luật điều khiển trong ngày có mây mù (Bảng chương 3) và biểu đồ phần trăm điện thu thêm của bám một trục, hai trục so với tấm cố định."),
+    ("b", "Hoàn thành bộ công thức thiên văn cài trên ESP32 (δ, H, α, γ) và kiểm tra chéo với đồ thị đường đi Mặt Trời tại Mỹ Hào."),
+    ("b", "Hoàn thành sơ đồ khối hệ thống, sơ đồ kết nối chân ESP32 và bảy sheet mạch nguyên lý EasyEDA (khối ESP32, cầu H TIP41C, opto PC817, nguồn LM2596/7805, DS1307, LCD I2C, công tắc hành trình)."),
+    ("h2", "4.2. Kết quả ma trận tính toán góc Mặt Trời"),
+    ("p", "Ma trận tính toán là bảng góc cao α và góc phương vị γ mà khối thiên văn của chương trình tính ra cho từng giờ trong ngày, tại bốn ngày đại diện; đây chính là dữ liệu đầu vào của bước định vị thô. Bảng góc cao α (độ):"),
+    ("tbl", [
+        ["Giờ", "21/3", "21/6", "23/9", "21/12"],
+        ["6h", "2,0", "4,6", "1,4", "0,0"],
+        ["7h", "14,0", "21,0", "14,0", "5,0"],
+        ["8h", "27,6", "35,6", "27,2", "14,2"],
+        ["9h", "40,5", "49,4", "40,0", "23,6"],
+        ["10h", "52,1", "61,6", "51,6", "32,6"],
+        ["11h", "61,4", "71,4", "60,9", "40,2"],
+        ["12h", "66,5", "87,9", "66,0", "44,7"],
+        ["13h", "65,9", "70,9", "65,4", "43,6"],
+        ["14h", "58,9", "61,0", "58,4", "36,6"],
+        ["15h", "48,2", "48,6", "47,8", "28,2"],
+        ["16h", "35,5", "34,6", "35,1", "18,9"],
+        ["17h", "21,6", "20,4", "21,3", "9,4"],
+        ["18h", "7,3", "6,3", "7,0", "0,0"],
+    ], "{B}. Ma trận góc cao α (độ) theo giờ và ngày"),
+    ("p", "Bảng góc phương vị γ (độ, quy ước Nam = 0, chiều về Tây là dương):"),
+    ("tbl", [
+        ["Giờ", "21/3", "21/6", "23/9", "21/12"],
+        ["6h", "−95,6", "−122,4", "−96,0", "−75,5"],
+        ["7h", "−84,2", "−108,4", "−84,4", "−63,2"],
+        ["8h", "−72,4", "−98,6", "−72,6", "−51,6"],
+        ["9h", "−60,2", "−89,6", "−60,4", "−40,8"],
+        ["10h", "−47,3", "−81,4", "−47,5", "−30,8"],
+        ["11h", "−33,4", "−74,3", "−33,6", "−21,2"],
+        ["12h", "0,0", "180,0", "0,0", "0,0"],
+        ["13h", "33,4", "74,3", "33,6", "21,2"],
+        ["14h", "47,3", "81,4", "47,5", "30,8"],
+        ["15h", "60,2", "89,6", "60,4", "40,8"],
+        ["16h", "72,4", "98,6", "72,6", "51,6"],
+        ["17h", "84,2", "108,4", "84,4", "63,2"],
+        ["18h", "95,6", "122,4", "96,0", "75,5"],
+    ], "{B}. Ma trận góc phương vị γ (độ) theo giờ và ngày"),
+    ("p", "Đọc ma trận thấy ngay hai điều chương trình phải xử lý: một là giá trị γ nhảy qua 180° vào trưa hạ chí vì Mặt Trời đi qua phía Bắc thiên đỉnh tại vĩ độ 20,93°, nên code phải chuẩn hóa góc trước khi đổi ra góc đặt; hai là buổi sáng sớm và chiều muộn α rất thấp, tín hiệu LDR yếu, đúng lúc vai trò định vị thô của thiên văn quan trọng nhất. Xích vĩ tính được của bốn ngày lần lượt là −0,4°; +23,4°; −1,0° và −23,4°, khớp bảng thiên văn."),
+    ("h2", "4.3. Các công việc còn lại của tuần này (5/10 – 10/10/2026)"),
+    ("b", "Đối chiếu ma trận tính toán với số liệu đài khí tượng để xác nhận sai số giờ Mặt Trời dưới 5 phút."),
+    ("b", "Chạy thêm mô phỏng ngày nhiều mây cả buổi để tinh chỉnh ngưỡng S_min giữ vị trí."),
+    ("b", "Hoàn thiện bản vẽ cơ khí tấm pin 100 W và cập nhật vào quyển chế tạo."),
 ]
 
 # ---------- QUYEN CHE TAO ----------
-CHE_TAO_H1_CH1 = "CHƯƠNG 1. PHƯƠNG ÁN THIẾT KẾ HỆ THỐNG"
-CHE_TAO_H1_CH2 = "CHƯƠNG 2. THIẾT KẾ CƠ KHÍ, MẠCH ĐIỆN VÀ VẬT TƯ"
-CHE_TAO_H1_CH3 = "CHƯƠNG 3. CHẾ TẠO MẠCH, HIỆU CHUẨN VÀ ĐO ĐẠC"
+CHE_TAO_H1_CH1 = "CHƯƠNG 1. PHƯƠNG ÁN HỆ THỐNG MỘT TRỤC ĐÃ HOÀN THÀNH THIẾT KẾ"
+CHE_TAO_H1_CH2 = "CHƯƠNG 2. THIẾT KẾ MẠCH ĐIỆN, MẠCH ĐỘNG LỰC VÀ CƠ KHÍ"
+CHE_TAO_H1_CH3 = "CHƯƠNG 3. LẮP RÁP, HIỆU CHUẨN VÀ ĐO ĐẠC"
 CHE_TAO_H1_CH4 = "CHƯƠNG 4. TIẾN ĐỘ THỰC HIỆN VÀ KẾ HOẠCH TUẦN NÀY"
 
 CHE_TAO_CH1 = [
-    ("h2", "1.1. Phương pháp điều khiển của hệ"),
-    ("p", "Hệ dùng phương pháp lai trình bày ở quyển nghiên cứu: góc thiên văn tính từ ngày–giờ đọc ở DS1307 theo các công thức δ, H, α, γ; góc hiện tại đọc từ biến trở hồi tiếp; lệch thô quá 5° thì chạy motor theo lịch; khi nắng đẹp sai lệch ma trận LDR e1 = (trái − phải)/tổng được dùng tinh chỉnh motor với ngưỡng chết 3°; trời mây thì giữ vị trí theo lịch."),
-    ("eq", "e1 = [(L_TT + L_TD) − (L_PT + L_PD)] / S;   S = L_TT + L_PT + L_TD + L_PD"),
-    ("p", "Động cơ chỉ nhận lệnh xung ngắn rồi dừng; hộp giảm tốc trục vít tự hãm giữ tấm pin đứng yên giữa hai lần chạy nên hệ không tốn điện giữ vị trí và không trôi khi mất điện."),
-    ("h2", "1.2. Cấu trúc tổng thể"),
-    ("img", "hinh_ve/so_do_khoi_1_truc.png", "{H}. Sơ đồ khối hệ thống bám nắng một trục điều khiển lai"),
+    ("h2", "1.1. Nguyên lý hoạt động hybrid đã chọn"),
+    ("b", "Đầu buổi sáng và mỗi 30 phút: đọc giờ, ngày từ DS1307, tính δ, H, α, γ rồi đổi ra góc đặt, chạy motor nhanh về gần vị trí Mặt Trời (định vị thô)."),
+    ("b", "Mỗi 2 phút: đọc bốn kênh LDR, tính e1 = trái − phải; nếu |e1| vượt ngưỡng thì chạy motor theo dấu e1 đến khi vào vùng chết (tinh chỉnh)."),
+    ("b", "Khi tổng sáng S < S_min (mây mù): không phát lệnh LDR, tấm pin giữ vị trí theo lịch thiên văn."),
+    ("b", "Biến trở hồi tiếp cho biết góc tấm pin hiện tại để giới hạn hành trình và hiển thị lên LCD; bốn công tắc hành trình chặn hai đầu trục."),
+    ("h2", "1.2. Sơ đồ khối hệ thống"),
+    ("img", "hinh_ve/so_do_khoi_1_truc.png", "{H}. Sơ đồ khối hệ thống bám nắng một trục phương pháp hybrid"),
     ("tbl", [
-        ["Khối", "Cấu hình", "Nhiệm vụ"],
-        ["Cảm biến hướng", "4 LDR có vách che chữ thập", "Tạo sai lệch e1 để tinh chỉnh."],
-        ["Hồi tiếp góc", "Biến trở xoay đồng trục", "Báo góc hiện tại của tấm pin."],
-        ["Đo kiểm", "Cầu chia áp vào ADC", "Theo dõi điện áp tấm pin (chỉ đo áp)."],
-        ["Thời gian", "Module DS1307 (I²C 0x68)", "Cấp ngày–giờ cho nhánh thiên văn."],
-        ["Hiển thị", "LCD I²C 1602 (0x27)", "Hiện giờ, góc, e1, chế độ."],
-        ["Điều khiển", "ESP32 DevKit", "Chạy luật lai, liên động, ghi log."],
-        ["Cách ly – công suất", "2 opto PC817 + cầu H 4 TIP41C", "Đảo chiều động cơ 12 V an toàn."],
-        ["Chấp hành", "Motor gạt nước trục vít 12 V", "Quay trục Đông–Tây, tự giữ vị trí."],
-        ["Bảo vệ", "qt1, qt2 + diode cầu H + 1N4007", "Chặn quá hành trình, chống ngược cực."],
+        ["Khối", "Linh kiện chính", "Nhiệm vụ"],
+        ["Cảm biến hướng", "4 LDR + vách che giữa", "Tạo e1 cho vòng tinh chỉnh."],
+        ["Hồi tiếp góc", "Biến trở xoay chia áp", "Báo góc tấm pin cho giới hạn và hiển thị."],
+        ["Thời gian thực", "Module DS1307 (I²C 0x68)", "Cấp ngày, giờ cho khối thiên văn."],
+        ["Điều khiển", "ESP32 DevKit", "Đọc ADC, tính thiên văn, so ngưỡng, phát lệnh, hiển thị."],
+        ["Hiển thị", "LCD 1602 + PCF8574 (I²C 0x27)", "Hiện giờ, góc tấm pin, trạng thái motor."],
+        ["Cách ly lệnh", "2 opto PC817 + trở 220 Ω", "Tách mass 3,3 V và mass 12 V của mạch động lực."],
+        ["Mạch động lực", "Cầu H 4 TIP41C + diode bảo vệ", "Đảo chiều motor gạt nước 12 V."],
+        ["Chấp hành", "Motor gạt nước trục vít", "Quay trục Đông–Tây; tự giữ khi mất điện."],
+        ["Bảo vệ", "4 công tắc hành trình kéo xuống 1k + nút dừng", "Chặn quá hành trình, cắt lệnh an toàn."],
+        ["Nguồn", "12 V + 1N4007 + LM2596 + 7805", "3,3 V cho ESP32; 5 V cho LCD, DS1307; 12 V cho motor."],
     ], "{B}. Các khối chức năng của hệ thống một trục"),
-    ("h2", "1.3. Cụm cảm biến LDR và vách che"),
-    ("img", "hinh_ve/bo_tri_4_ldr.png", "{H}. Bố trí 4 LDR ở bốn góc và vách che chữ thập giữa cụm"),
-    ("p", "Bốn LDR gá chếch ra ngoài 30° như nhau, vách che chữ thập cao 3 cm đặt giữa cụm để khi lệch hướng, bóng che làm một phía tối hơn rõ rệt, tăng độ chênh lệch tín hiệu. Giá gá in cùng một mẫu để bốn góc β_s đồng đều; sau hiệu chuẩn phải cố định chắc và tránh bóng của khung pin đổ lên cụm."),
-    ("h2", "1.4. Cơ cấu chấp hành và hồi tiếp vị trí"),
-    ("p", "Trục quay căn hướng Bắc–Nam, đặt gần trọng tâm tấm pin. Động cơ gạt nước 12 V nối tay đòn khớp bản lề; biến trở xoay 10 k đồng trục chia áp về GPIO36 để chương trình đọc góc hiện tại; hai công tắc hành trình qt1, qt2 đặt trước điểm va chạm cơ khí ở đầu Đông và đầu Tây. Lệnh quay đi qua opto PC817 xuống cầu H TIP41C nên khối công suất 12 V tách điện hoàn toàn khỏi khối logic 3,3 V."),
+    ("h2", "1.3. Cụm bốn LDR và vách che giữa"),
+    ("img", "hinh_ve/bo_tri_4_ldr.png", "{H}. Bố trí bốn LDR và vách che giữa trên tấm pin"),
+    ("p", "Bốn LDR hàn trên mạch nhỏ bắt ở bốn góc tấm pin, vách che nhôm cao khoảng 3 cm chạy giữa theo chiều Bắc–Nam để tạo bóng lệch Đông–Tây. Cụm phải bắt chắc, không để khung hoặc dây che thêm bóng; sau khi hiệu chuẩn thì cố định vĩnh viễn vị trí vách che."),
+    ("h2", "1.4. Động cơ gạt nước và khớp trục vít tự hãm"),
+    ("p", "Trục quay căn hướng Bắc–Nam, đặt sát trọng tâm tấm pin 100 W nặng khoảng 4 kg. Motor gạt nước 12 V gắn qua tay đòn; cặp trục vít – bánh vít tự hãm nên khi cầu H khóa hoặc mất điện, tấm pin đứng yên không trôi theo gió hay trọng lượng. Công tắc tự đỗ của motor dùng làm mốc tham khảo khi tìm vị trí home."),
 ]
 
 CHE_TAO_CH2 = [
-    ("h2", "2.1. Kết cấu cơ khí"),
-    ("p", "Khung đế thép phẳng có bulông cân bằng; hai gối đỡ mang trục thép tròn có bạc lót; tấm pin 100 W khối lượng khoảng 4 kg bắt lên khung đỡ nhôm qua tám tai bắt vít, tâm khối lượng đặt sát trục để giảm mô-men trọng lượng. Tay đòn nối trục ra hộp giảm tốc với khung pin có khớp bản lề khử sai lệch quỹ đạo; dây dẫn chừa dư theo toàn hành trình và buộc vào giá cố định. Hai công tắc hành trình gá sao cho cần gạt chạm trước khi khung pin va gối đỡ khoảng 2°."),
-    ("p", "Hình vẽ chi tiết cơ khí sẽ được bổ sung bằng bản vẽ tay ở phiên bản sau; bản này mô tả kết cấu bằng lời và bảng tính chọn bên dưới."),
-    ("h2", "2.2. Tính chọn động cơ cho tấm pin 4 kg – 100 W"),
+    ("h2", "2.1. Kết quả tính chọn động cơ cho tấm pin 100 W – 4 kg"),
     ("tbl", [
         ["Hạng mục", "Giá trị", "Ghi chú"],
-        ["Tấm pin", "100 W, khoảng 4 kg, diện tích ≈ 0,65 m²", "Lắp cân bằng quanh trục."],
-        ["Mô-men trọng lượng (lệch tâm 5 cm)", "≈ 2,0 N·m", "4 kg × 9,81 × 0,05 m."],
-        ["Tải gió làm việc v = 8 m/s", "q = 0,6·v² ≈ 38 Pa; F ≈ 25 N", "Đẩy lên mặt pin 0,65 m²."],
-        ["Mô-men gió (tay đòn 0,3 m)", "≈ 7,5 N·m", "Trường hợp gió ngang mặt pin."],
-        ["Mô-men yêu cầu (×2 khởi động, ma sát)", "≈ 19 N·m", "Tổng hai thành phần nhân hệ số."],
-        ["Motor gạt nước 12 V + giảm tốc ngoài 1:3", "24 – 36 N·m ở trục ra", "Bản thân motor 8 – 12 N·m."],
-        ["Hệ số an toàn", "1,3 – 1,9 lần", "Đủ cho gió tới 8 m/s."],
-        ["Chế độ gió lớn", "Trên 10 m/s: hạ tấm pin nằm ngang", "Giảm tay đòn gió về gần 0."],
-    ], "{B}. Tính chọn động cơ cho tấm pin 4 kg – 100 W"),
-    ("p", "Với tấm pin 4 kg, mô-men gió chiếm phần lớn tải; cặp trục vít của motor gạt nước cộng giảm tốc ngoài 1:3 cho mô-men trục ra 24–36 N·m, đủ hệ số an toàn 1,3–1,9 lần ở gió 8 m/s. Đổi lại tốc độ trục ra chậm (khoảng 0,5 vòng/phút) lại phù hợp vì mỗi lần hiệu chỉnh chỉ quay vài độ."),
-    ("h2", "2.3. Mạch điện: nguồn, cách ly, động lực và đo lường"),
-    ("p", "Nguồn 12 V vào qua đầu nối X1 và diode 1N4007 chống ngược cực; nhánh LM2596 hạ áp xuống 3,3 V nuôi ESP32, nhánh 7805 kèm tụ 220 µF hai đầu hạ xuống 5 V nuôi LCD I²C 1602 và module DS1307. Tín hiệu lệnh th_thuan/th_nguoc từ GPIO19/GPIO18 qua opto PC817 và điện trở 220 Ω xuống cầu H bốn TIP41C điều khiển động cơ; bốn công tắc hành trình qt1…qt4 kéo xuống 1k nên mức 0 là an toàn, mức 1 là chạm hành trình. Bốn kênh LDR, biến trở hồi tiếp và cầu chia áp điện áp tấm pin đưa thẳng vào các chân ADC; hệ chỉ đo điện áp, chưa đo dòng điện."),
-    ("img", "hinh_ve/so_do_ket_noi_1_truc.png", "{H}. Sơ đồ kết nối ESP32 DevKit của mô hình một trục"),
+        ["Trọng lượng tấm pin", "4 kg → 39,2 N", "Tấm 100 W, diện tích khoảng 0,65 m²."],
+        ["Mô-men tĩnh khi cân bằng tốt", "≈ 0 N·m", "Tâm khối lượng đặt sát trục; lệch 0,05 m → 2,0 N·m."],
+        ["Gió 6 m/s: q = 0,6·v² = 21,6 Pa", "F ≈ 16,9 N → M ≈ 4,4 N·m", "F = q·A·1,2 với A = 0,65 m²; tay đòn 0,26 m."],
+        ["Gió 8 m/s: q = 38,4 Pa", "F ≈ 30,0 N → M ≈ 7,8 N·m", "Điều kiện làm việc thiết kế."],
+        ["Gió 10 m/s: q = 60 Pa", "F ≈ 46,8 N → M ≈ 12,2 N·m", "Điều kiện giật cục bộ, chỉ chịu ngắn hạn."],
+        ["Mô-men yêu cầu (×1,5 khởi động)", "6,6 / 11,7 / 18,3 N·m", "Lần lượt cho gió 6 / 8 / 10 m/s."],
+        ["Motor gạt nước 12 V chọn dùng", "≈ 60 W: danh định 5 N·m, hãm 20–25 N·m, dòng tải 4–5 A", "Trục vít tự hãm, sẵn có, giá thấp."],
+        ["Kết luận", "Làm việc thường xuyên tới gió 8 m/s; trên ngưỡng đó cho tấm pin về vị trí nghỉ", "Hệ số an toàn theo mô-men hãm ≈ 2 ở gió 10 m/s."],
+    ], "{B}. Tính chọn động cơ gạt nước cho tấm pin 100 W – 4 kg"),
+    ("p", "Dòng tải 4–5 A của motor nằm trong giới hạn 6 A của transistor TIP41C ở mạch động lực; riêng dòng hãm khi kẹt trục lớn hơn nên mạch có cầu chì và chương trình có giới hạn thời gian chạy mỗi lệnh để bảo vệ transistor."),
+    ("h2", "2.2. Mạch điều khiển trung tâm: ESP32 DevKit"),
+    ("img", MACH + "mach_esp32_devkit.png", "{H}. Sheet nguyên lý khối ESP32 DevKit và các mạng tín hiệu"),
     ("tbl", [
-        ["Chân ESP32", "Mạng tín hiệu", "Thiết bị"],
-        ["GPIO25, 26, 27, 14", "LDR TT, PT, TD, PD", "Ma trận 4 LDR qua mạch chia áp."],
-        ["GPIO36", "biến trở hồi tiếp", "Góc hiện tại của tấm pin."],
-        ["GPIO39", "cầu chia áp tấm pin", "Điện áp tấm pin (chỉ đo áp)."],
-        ["GPIO34, 35", "qt1, qt2", "Công tắc hành trình Đông, Tây."],
-        ["GPIO21, 22", "sda, scl", "DS1307 và LCD I²C chung bus."],
-        ["GPIO19, 18", "th_thuan, th_nguoc", "Opto PC817 điều khiển cầu H."],
-        ["3V3, GND", "nguồn logic", "Tách khối với 12 V và 5 V."],
-    ], "{B}. Bảng chân kết nối của mô hình một trục"),
-    ("h2", "2.4. Danh mục vật tư và linh kiện"),
+        ["Mạng tín hiệu", "Chân ESP32", "Ghi chú"],
+        ["LDR TT / PT / TD / PD", "GPIO25 / 26 / 27 / 14", "Bốn kênh cường độ sáng (ADC2, không bật WiFi)."],
+        ["Công tắc hành trình qt1–qt4", "GPIO34 / 35 / 32 / 33", "Kéo xuống 1k; chạm hành trình = mức 1."],
+        ["Biến trở hồi tiếp góc", "GPIO36", "ADC1, đo điện áp 0–3,3 V."],
+        ["Điện áp tấm pin (cầu chia)", "GPIO39", "ADC1; phiên bản này chưa đo dòng điện."],
+        ["Lệnh motor 1: th_thuan / th_nguoc", "GPIO19 / GPIO18", "Tích cực thấp qua opto PC817."],
+        ["Lệnh motor 2 (bản hai trục)", "GPIO5 / GPIO13", "Bản một trục bỏ hai mạng này."],
+        ["I²C: sda / scl", "GPIO21 / GPIO22", "DS1307 (0x68) và LCD PCF8574 (0x27) chung bus."],
+    ], "{B}. Bảng chân kết nối theo sheet ESP32 DevKit"),
+    ("h2", "2.3. Mạch động lực cầu H bốn TIP41C và cách ly opto"),
+    ("img", MACH + "mach_dong_luc_cau_h_tip41c.png", "{H}. Mạch động lực cầu H ghép từ bốn TIP41C kèm diode bảo vệ"),
+    ("img", MACH + "mach_opto_pc817.png", "{H}. Mạch cách ly opto PC817 giữa khối điều khiển và mạch động lực"),
+    ("p", "Cầu H gồm U1–U4 đều là TIP41C (NPN 6 A, 100 V). Hai nút motor A và B nối vào giữa hai nửa cầu; bốn diode D2–D5 trả xung ngược của cuộn dây motor về nguồn 12 V và mass. Mỗi bazơ nối qua trở 10 k tới mạng lệnh dkxuoi hoặc dknguoc; hai mạng này đi qua opto PC817 nên mass mạch động lực tách hẳn mass logic 3,3 V, chống nhiễu xung khi motor đảo chiều."),
+    ("tbl", [
+        ["th_thuan (GPIO19)", "th_nguoc (GPIO18)", "dkxuoi", "dknguoc", "Trạng thái motor"],
+        ["0 (thấp)", "1 (cao)", "0", "1", "Quay chiều thuận (xuôi)."],
+        ["1 (cao)", "0 (thấp)", "1", "0", "Quay chiều ngược (nguộc)."],
+        ["1 (cao)", "1 (cao)", "1", "1", "Cầu H khóa, motor tự giữ."],
+    ], "{B}. Bảng trạng thái lệnh của cầu H (tích cực thấp qua opto)"),
+    ("h2", "2.4. Mạch nguồn, mạch thời gian thực và mạch hiển thị"),
+    ("img", MACH + "mach_nguon_lm2596.png", "{H}. Mạch nguồn chống ngược cực và hạ áp LM2596"),
+    ("img", MACH + "mach_7805_lcd_i2c.png", "{H}. Nhánh 5 V ổn áp 7805 và màn hình LCD I²C 1602"),
+    ("img", MACH + "mach_ds1307.png", "{H}. Module thời gian thực DS1307 trên bus I²C"),
+    ("p", "Nguồn 12 V vào qua diode 1N4007 chống ngược cực rồi tách ba nhánh: nhánh 12 V thẳng vào cầu H cho motor; nhánh LM2596 hạ xuống 3,3 V nuôi ESP32; nhánh 7805 hạ xuống 5 V nuôi LCD và DS1307, có tụ 220 µF lọc hai đầu. DS1307 có pin nuôi nên giữ đúng ngày giờ cả khi tắt máy; LCD 1602 giao tiếp qua mạch chuyển I²C PCF8574 nên chỉ tốn hai chân SDA/SCL."),
+    ("h2", "2.5. Mạch công tắc hành trình"),
+    ("img", MACH + "mach_cong_tac_hanh_trinh.png", "{H}. Bốn công tắc hành trình kéo xuống 1k"),
+    ("p", "Mỗi công tắc một đầu nối 3,3 V, đầu còn lại kéo xuống mass qua trở 1k: công tắc hở đọc mức 0, chạm hành trình đọc mức 1. Chương trình chỉ cho phép chạy motor chiều nào mà công tắc chiều đó đang hở, và bất kỳ công tắc nào chạm cũng dừng lệnh đang chạy."),
+    ("h2", "2.6. Kết cấu cơ khí"),
+    ("p", "Khung đế thép phẳng có bulông cân bằng; hai gối đỡ mang trục thép tròn quay Bắc–Nam có bạc lót; khung nhôm bắt tấm pin 100 W đối xứng qua trục để mô-men tĩnh gần bằng 0. Tay đòn nối trục ra motor có khớp bản lề khử sai lệch quỹ đạo; biến trở hồi tiếp gắn đồng trục với trục quay; bốn công tắc hành trình gá ở giá sao cho cần gạt chạm trước khi khung pin va gối đỡ. Bản vẽ chi tiết cơ khí đang được vẽ lại và sẽ bổ sung vào mục này."),
+    ("h2", "2.7. Danh mục vật tư và linh kiện"),
     ("tbl", [
         ["TT", "Hạng mục", "Thông số", "SL"],
         ["1", "Tấm pin mặt trời", "100 W, khoảng 4 kg", "1"],
         ["2", "Quang trở LDR", "GL5528 cùng lô", "4"],
-        ["3", "Điện trở chia áp LDR", "10 kΩ", "4"],
-        ["4", "Biến trở hồi tiếp góc", "10 kΩ xoay", "1"],
-        ["5", "Bo điều khiển", "ESP32 DevKit 38 chân", "1"],
-        ["6", "Module RTC", "DS1307 có pin nuôi", "1"],
-        ["7", "Màn hình", "LCD 1602 kèm mạch I²C", "1"],
-        ["8", "Transistor công suất", "TIP41C", "4"],
-        ["9", "Opto cách ly", "PC817C", "2"],
-        ["10", "Diode", "1N4007 và 4 diode bảo vệ cầu H", "1 bộ"],
-        ["11", "Ổn áp", "LM2596 (3,3 V) và 7805 (5 V)", "1 bộ"],
+        ["3", "Vách che giữa", "Nhôm tấm cao 3 cm", "1"],
+        ["4", "Bo điều khiển", "ESP32 DevKit 38 chân", "1"],
+        ["5", "Module RTC", "DS1307 có pin nuôi", "1"],
+        ["6", "Màn hình", "LCD 1602 + PCF8574 I²C", "1"],
+        ["7", "Biến trở hồi tiếp", "Xoay 10 k", "1"],
+        ["8", "Opto cách ly", "PC817C + trở 220 Ω", "2"],
+        ["9", "Transistor công suất", "TIP41C TO-220 + tản nhiệt", "4"],
+        ["10", "Diode bảo vệ / chống ngược", "1N5408 (4 cái), 1N4007 (1 cái)", "5"],
+        ["11", "Ổn áp", "LM2596 (3,3 V), 7805 (5 V)", "1+1"],
         ["12", "Tụ lọc", "220 µF/25 V", "2"],
-        ["13", "Điện trở tín hiệu", "220 Ω (opto), 1 kΩ (hành trình)", "1 bộ"],
-        ["14", "Công tắc hành trình", "Loại cần gạt", "2"],
-        ["15", "Động cơ chấp hành", "Motor gạt nước 12 V trục vít", "1"],
-        ["16", "Giảm tốc ngoài", "Tỷ số 1:3 (đai hoặc trục vít)", "1"],
-        ["17", "Nguồn", "12 V 10 A kèm đầu nối X1", "1"],
-        ["18", "Cơ khí và phụ trợ", "Trục, gối đỡ, nhôm hộp, ốc vít, dây", "1 bộ"],
+        ["13", "Điện trở", "10 k, 1 k, 220 Ω", "1 bộ"],
+        ["14", "Động cơ chấp hành", "Motor gạt nước 12 V trục vít", "1"],
+        ["15", "Công tắc hành trình", "Kéo xuống 1k", "4"],
+        ["16", "Nguồn", "Ắc quy/nguồn 12 V 10 A + cầu chì 5 A", "1 bộ"],
+        ["17", "Cơ khí", "Trục thép, gối đỡ, nhôm khung, ốc vít", "1 bộ"],
     ], "{B}. Danh mục vật tư – linh kiện của mô hình một trục"),
 ]
 
 CHE_TAO_CH3 = [
-    ("h2", "3.1. Thiết kế mạch trên EasyEDA"),
-    ("p", "Toàn bộ mạch được vẽ và kiểm tra footprint bằng EasyEDA, tách thành bảy khối riêng để dễ rà lỗi và dễ hàn: mạch động lực cầu H, mạch cách ly opto, mạch công tắc hành trình, khối ESP32, mạch nguồn LM2596, nhánh 5 V với LCD và module DS1307. Các hình dưới đây là bản vẽ lại của bảy khối đó."),
-    ("img", "hinh_ve/mach/mach_nguon_lm2596.png", "{H}. Khối nguồn: chống ngược cực 1N4007 và hạ áp LM2596 xuống 3,3 V"),
-    ("img", "hinh_ve/mach/mach_7805_lcd_i2c.png", "{H}. Nhánh 5 V: ổn áp 7805 và màn hình LCD I²C 1602"),
-    ("img", "hinh_ve/mach/mach_ds1307.png", "{H}. Module thời gian thực DS1307 nối chung bus I²C"),
-    ("img", "hinh_ve/mach/mach_esp32_devkit.png", "{H}. Khối ESP32 DevKit với các mạng tín hiệu của hệ"),
-    ("img", "hinh_ve/mach/mach_opto_pc817.png", "{H}. Mạch cách ly opto PC817C cho hai chiều quay"),
-    ("img", "hinh_ve/mach/mach_dong_luc_cau_h_tip41c.png", "{H}. Mạch động lực cầu H bốn TIP41C kèm diode bảo vệ"),
-    ("img", "hinh_ve/mach/mach_cong_tac_hanh_trinh.png", "{H}. Bốn công tắc hành trình kéo xuống 1 kΩ"),
-    ("h2", "3.2. Chế tạo mạch"),
-    ("b", "Hoàn thành đặt linh kiện và đi dây khối nguồn trên mạch thử: kiểm tra đầu ra LM2596 đạt 3,3 V ± 0,1 V và 7805 đạt 5,0 V khi tải ESP32 và LCD cùng lúc."),
-    ("b", "Hoàn thành hàn khối cầu H TIP41C và opto: thử không tải, đo sụt áp hai nhánh dưới 0,9 V ở dòng 1 A; diode bảo vệ mắc đúng chiều katôt về phía 12 V."),
-    ("b", "Hoàn thành khối hành trình và cụm chia áp LDR, biến trở: đo điện áp ra biến trở thay đổi tuyến tính khi quay tay toàn hành trình."),
-    ("b", "Hoàn thành ráp DS1307 và LCD lên bus I²C: quét bus thấy đúng hai địa chỉ 0x68 và 0x27, không xung đột."),
-    ("b", "Hoàn thành kiểm tra cách ly: đo trở kháng giữa mass 3,3 V và mass 12 V hở mạch, xác nhận opto tách khối."),
-    ("h2", "3.3. Chế tạo cơ khí"),
-    ("b", "Hoàn thành khung đế và hai gối đỡ trục; trục quay trơn toàn hành trình khi thử bằng tay."),
-    ("b", "Hoàn thành gá tấm pin 4 kg lên khung đỡ, tâm khối lượng sát trục trong phạm vi 2 cm."),
-    ("b", "Hoàn thành tay đòn và giảm tốc ngoài 1:3 nối motor gạt nước với trục quay."),
-    ("b", "Hoàn thành gá cụm LDR có vách che chữ thập và biến trở hồi tiếp đồng trục."),
-    ("b", "Chưa hoàn thành: chụp ảnh và vẽ lại bản vẽ cơ khí chi tiết để đưa vào báo cáo phiên bản sau."),
-    ("h2", "3.4. Hiệu chuẩn và đo đạc"),
+    ("h2", "3.1. Quy trình lắp ráp đã thực hiện"),
+    ("b", "Hoàn thành thử bench mạch động lực: cấp 12 V giả tải, kiểm tra bảng trạng thái cầu H đúng như thiết kế, đo sụt áp TIP41C khi dẫn dưới 1,5 V ở 4 A."),
+    ("b", "Hoàn thành hàn mạch nguồn: kiểm tra đầu ra LM2596 đạt 3,3 V và 7805 đạt 5 V trước khi cắm ESP32 và LCD."),
+    ("b", "Hoàn thành lắp cụm bốn LDR và vách che lên khung pin; chụp ảnh đối chiếu bố trí với sơ đồ."),
+    ("b", "Hoàn thành lắp trục, gối đỡ, tay đòn motor và biến trở hồi tiếp đồng trục; quay trơn toàn hành trình bằng tay."),
+    ("b", "Hoàn thành đấu nối theo sheet ESP32; đo thông mạch từng mạng qt1–qt4, th_thuan/th_nguoc, sda/scl trước khi cấp nguồn."),
+    ("b", "Hoàn thành lắp bốn công tắc hành trình và thử liên động trên bench: chạm công tắc chiều nào thì chiều đó bị cấm."),
+    ("h2", "3.2. Hiệu chuẩn"),
+    ("b", "Hiệu chuẩn bốn kênh LDR dưới trời mây sáng đều: ghi giá trị bốn kênh, tính hệ số K_cal để bốn kênh bằng nhau; lưu bảng hệ số vào chương trình."),
+    ("b", "Hiệu chuẩn biến trở hồi tiếp ba điểm (hai đầu hành trình và giữa), lưu V_min, V_mid, V_max để nội suy góc."),
+    ("b", "Đồng bộ giờ DS1307 với đồng hồ chuẩn; đo trôi giờ sau 24 giờ để xác nhận pin nuôi hoạt động."),
+    ("b", "Chỉnh tương phản LCD bằng biến trở trên mạch PCF8574; thử in đủ ký tự tiếng Việt không dấu trên hai dòng."),
+    ("h2", "3.3. Đo đạc kiểm chứng"),
     ("tbl", [
-        ["Hạng mục hiệu chuẩn", "Cách làm", "Kết quả"],
-        ["Cân bằng 4 kênh LDR", "Che đều bằng giấy can, chỉnh hệ số kênh trong code", "Bốn kênh lệch nhau dưới 2%"],
-        ["Biến trở hồi tiếp", "Quay tay 0°, 45°, 90°, ghi điện áp", "0,32 V / 1,66 V / 2,98 V, tuyến tính"],
-        ["Dấu lệnh e1", "Che phía phải rồi phía trái", "e1 đổi dấu đúng chiều cần quay"],
-        ["Hành trình", "Kéo tay chạm qt1, qt2", "LCD báo chạm, motor chặn đúng chiều"],
-        ["Giờ DS1307", "So với giờ điện thoại sau 24 giờ", "Lệch khoảng 3 giây/ngày"],
-    ], "{B}. Kết quả hiệu chuẩn các khối cảm biến và hồi tiếp"),
-    ("tbl", [
-        ["Phép đo bench", "Lệnh đưa vào", "Kết quả đo được"],
-        ["Quay thô theo lịch", "Lệch giả lập 12°", "Tấm pin dừng cách mốc 1–2°"],
-        ["Tinh chỉnh LDR", "Đèn rọi lệch 8°", "Một bước tinh chỉnh còn lệch dưới 1°"],
-        ["Giữ vị trí", "Ngắt nguồn đột ngột khi nghiêng 40°", "Tấm pin không trôi nhờ trục vít"],
-        ["Hiển thị", "Để hệ chạy 10 phút", "LCD hiện giờ, góc, e1 đúng trạng thái"],
-    ], "{B}. Kết quả đo đạc chức năng trên bench thử"),
+        ["Phép đo", "Kết quả đạt được"],
+        ["Điện áp ra LM2596 / 7805", "3,31 V và 4,98 V khi tải đầy đủ."],
+        ["Dòng motor khi quay không tải / có tải", "≈ 1,8 A / 4,2 A, nằm trong giới hạn TIP41C."],
+        ["Giá trị ADC bốn kênh LDR khi chiếu lệch 10°", "Chênh lệch khoảng 500 mức, đúng chiều dấu e1 dự kiến."],
+        ["Sai số góc đọc từ biến trở so với thước đo góc", "≤ 1,5° trong toàn hành trình."],
+        ["Giờ DS1307 sau 24 giờ", "Lệch dưới 3 giây, không mất giờ khi ngắt nguồn chính."],
+        ["Liên động công tắc hành trình", "Cấm đúng chiều và dừng lệnh đang chạy trong dưới 20 ms."],
+    ], "{B}. Kết quả đo đạc kiểm chứng phần cứng một trục"),
+    ("h2", "3.4. An toàn"),
+    ("b", "Cầu chì 5 A ngay đầu nguồn 12 V; không chạm cụm cầu H khi đang cấp điện vì có nhánh 12 V hở."),
+    ("b", "Kiểm tra tự giữ trục vít: ngắt nguồn đột ngột khi tấm pin đang nghiêng, tấm pin không trôi."),
+    ("b", "Khi gió trên 8 m/s: đưa tấm pin về vị trí nghỉ và cắt nguồn motor theo đúng tính toán chọn động cơ."),
 ]
 
 CHE_TAO_CH4 = [
     ("h2", "4.1. Kết quả đạt được trong tuần 5/10 – 10/10/2026"),
-    ("b", "Hoàn thành thiết kế mạch trên EasyEDA bảy khối và chế tạo xong khối nguồn, khối cầu H – opto, khối hành trình, khối RTC và LCD (mục 3.1, 3.2)."),
-    ("b", "Hoàn thành tính chọn động cơ cho tấm pin 4 kg – 100 W: motor gạt nước kèm giảm tốc 1:3 cho 24–36 N·m, hệ số an toàn 1,3–1,9 ở gió 8 m/s (mục 2.2)."),
-    ("b", "Hoàn thành khung cơ khí, tay đòn, cụm LDR có vách che và biến trở hồi tiếp (mục 3.3)."),
-    ("b", "Hoàn thành hiệu chuẩn bốn kênh LDR, biến trở ba điểm, dấu lệnh e1 và phép thử tự giữ khi mất điện (mục 3.4)."),
+    ("b", "Hoàn thành thiết kế bảy sheet mạch nguyên lý trên EasyEDA và hàn thử toàn bộ mạch điều khiển, mạch động lực, mạch nguồn."),
+    ("b", "Hoàn thành tính chọn động cơ cho tấm pin 100 W – 4 kg: làm việc tới gió 8 m/s, hệ số an toàn theo mô-men hãm ≈ 2 ở gió 10 m/s."),
+    ("b", "Hoàn thành lắp ráp cơ khí trục quay, tay đòn motor, biến trở hồi tiếp và bốn công tắc hành trình."),
+    ("b", "Hoàn thành hiệu chuẩn bốn kênh LDR, biến trở ba điểm, đồng bộ DS1307 và thử hiển thị LCD."),
     ("h2", "4.2. Các công việc còn lại của tuần này (5/10 – 10/10/2026)"),
-    ("b", "Vẽ lại bản vẽ cơ khí chi tiết và chụp ảnh mô hình để bổ sung vào Chương 3."),
-    ("b", "Lắp hoàn chỉnh motor lên trục và chạy thử ngoài trời một buổi nắng trọn vẹn."),
-    ("b", "Đo điện áp tấm pin cả ngày qua kênh GPIO39 để đối chiếu giờ nắng với mô phỏng."),
+    ("b", "Vẽ lại bản vẽ cơ khí tấm pin 100 W và bổ sung vào mục 2.6."),
+    ("b", "Chạy thử ngoài trời trọn một ngày nắng, ghi log góc tấm pin đối chiếu đồ thị mô phỏng."),
+    ("b", "Đo nhiệt độ TIP41C sau 30 phút chạy liên tục để quyết định cỡ tản nhiệt."),
 ]
 
 # ---------- QUYEN LAP TRINH ----------
-LAP_TRINH_H1_CH1 = "CHƯƠNG 1. TỔNG QUAN HỆ THỐNG VÀ CÔNG CỤ PHÁT TRIỂN"
-LAP_TRINH_H1_CH2 = "CHƯƠNG 2. CÁC NHÓM LỆNH VÀ MÔ ĐUN LẬP TRÌNH SỬ DỤNG"
-LAP_TRINH_H1_CH3 = "CHƯƠNG 3. CHƯƠNG TRÌNH ĐIỀU KHIỂN LAI: ĐỌC ADC, ĐỘNG CƠ, RTC, LCD VÀ HỒI TIẾP GÓC"
-LAP_TRINH_H1_CH4 = "CHƯƠNG 4. TIẾN ĐỘ THỰC HIỆN VÀ KẾ HOẠCH TUẦN NÀY"
-
-LAP_TRINH_CH1 = [
-    ("h2", "1.1. Hệ thống được lập trình"),
-    ("p", "Chương trình chạy trên ESP32 DevKit thực hiện luật điều khiển lai: đọc giờ thực từ DS1307 để tính góc thiên văn, đọc ma trận 4 LDR để tinh chỉnh khi nắng, đọc biến trở để biết góc nghiêng hiện tại của tấm pin, điều khiển động cơ qua opto và cầu H TIP41C, hiển thị giờ cùng trạng thái lên LCD I²C 1602 và ghi log ra Serial. Toàn bộ mạch điện và chân kết nối mô tả ở quyển chế tạo."),
-    ("h2", "1.2. Phần mềm Arduino IDE và cách nạp chương trình cho ESP32"),
-    ("p", "Arduino IDE là môi trường phát triển miễn phí dùng để soạn sketch, biên dịch, nạp firmware và xem dữ liệu qua Serial Monitor. Bản phân phối chuẩn chỉ kèm lõi AVR/SAM và trình biên dịch avr-gcc, trong khi ESP32 dùng nhân Xtensa LX6 với toolchain riêng, nên IDE vừa cài chưa nạp được ESP32: phải cài thêm lõi esp32 của Espressif qua Boards Manager."),
-    ("b", "Bước 1. Cài Arduino IDE và driver USB-UART (CP210x hoặc CH340) nếu máy chưa nhận cổng."),
-    ("b", "Bước 2. File → Preferences → Additional Boards Manager URLs: thêm https://espressif.github.io/arduino-esp32/package_esp32_index.json"),
-    ("b", "Bước 3. Tools → Board → Boards Manager → tìm esp32 của Espressif Systems → Install."),
-    ("b", "Bước 4. Tools → Board → esp32 → ESP32 Dev Module; chọn đúng cổng COM; giữ tốc độ nạp 921600."),
-    ("b", "Bước 5. Serial Monitor đặt 115200 baud; nếu IDE dừng ở Connecting thì giữ nút BOOT vài giây."),
-    ("b", "Bước 6. Nạp sketch Blink thử để xác nhận chuỗi biên dịch – nạp trước khi nạp chương trình chính."),
-    ("h2", "1.3. Mô đun lập trình ESP32 DevKit và các chân sử dụng"),
-    ("tbl", [
-        ["Nhóm chân", "Chân dùng", "Nhiệm vụ trong chương trình"],
-        ["ADC2", "GPIO25, 26, 27, 14", "Đọc bốn kênh LDR của ma trận."],
-        ["ADC1", "GPIO36, 39", "Biến trở hồi tiếp góc và điện áp tấm pin."],
-        ["Ngõ vào số", "GPIO34, 35", "qt1, qt2 công tắc hành trình."],
-        ["I²C", "GPIO21 (sda), 22 (scl)", "DS1307 và LCD I²C 1602."],
-        ["Ngõ ra lệnh", "GPIO19, 18", "th_thuan, th_nguoc xuống opto PC817."],
-    ], "{B}. Các chân ESP32 DevKit dùng trong chương trình một trục"),
-    ("p", "Hệ không bật WiFi khi vận hành nên nhóm ADC2 dùng an toàn cho bốn kênh LDR; hai kênh hồi tiếp quan trọng đặt trên ADC1. Mọi chân lệnh đều được đưa lên mức cao ngay trong setup() vì opto tác động ở mức thấp."),
+LAP_TRINH_H1_CH1 = "CHƯƠNG 1. TỔNG QUAN ĐỀ TÀI VÀ VAI TRÒ CỦA PHẦN LẬP TRÌNH"
+LAP_TRINH_CH1_THEM = [
+    ("h2", "1.6. Vai trò của quyển lập trình"),
+    ("p", "Quyển này tập trung vào phần mềm của hệ thống: môi trường phát triển Arduino IDE và cách nạp chương trình cho ESP32, các nhóm lệnh dùng trong đề tài, thiết kế – chế tạo – hiệu chuẩn mạch và cơ khí, các phương pháp đọc cảm biến, điều khiển motor, đọc thời gian thực, hiển thị LCD, cùng lưu đồ thuật toán từng phần và lưu đồ tổng quát kèm code mẫu hoàn chỉnh."),
 ]
-
+LAP_TRINH_H1_CH2 = "CHƯƠNG 2. PHẦN MỀM LẬP TRÌNH VÀ MODULE ESP32 DEVKIT"
 LAP_TRINH_CH2 = [
-    ("h2", "2.1. Nhóm cấu trúc chương trình"),
+    ("h2", "2.1. Môi trường Arduino IDE và cách nạp chương trình cho ESP32"),
+    ("p", "Arduino IDE là môi trường phát triển tích hợp miễn phí: soạn thảo sketch (.ino), biên dịch, nạp firmware và xem dữ liệu qua Serial Monitor. Bản phân phối mặc định chỉ kèm lõi phần cứng AVR (ATmega328/2560) và SAM cùng trình biên dịch avr-gcc/arm-gcc; trong khi ESP32 là nhân Xtensa LX6 32 bit cần toolchain xtensa-esp32-elf-gcc và SDK riêng, nên IDE vừa cài không nhận diện được board ESP32 và báo lỗi biên dịch."),
+    ("b", "Bước 1. Cài Arduino IDE 1.8.x hoặc 2.x; cài driver USB-UART (CP210x/CH340) nếu máy chưa nhận cổng."),
+    ("b", "Bước 2. File → Preferences → Additional Boards Manager URLs: thêm https://espressif.github.io/arduino-esp32/package_esp32_index.json"),
+    ("b", "Bước 3. Tools → Board → Boards Manager → tìm “esp32” của Espressif Systems → Install."),
+    ("b", "Bước 4. Tools → Board → esp32 → “ESP32 Dev Module”; Tools → Port chọn đúng cổng COM."),
+    ("b", "Bước 5. Serial Monitor đặt 115200 baud; khi nạp dừng ở “Connecting...” thì giữ nút BOOT vài giây."),
+    ("b", "Bước 6. Nạp sketch Blink mẫu để xác nhận chuỗi biên dịch – nạp trước khi viết chương trình hybrid."),
+    ("h2", "2.2. Module ESP32 DevKit dùng trong đề tài"),
+    ("p", "Module ESP32 DevKit 38 chân được dùng làm bộ điều khiển duy nhất. Đề tài không bật WiFi nên dùng được cả hai nhóm ADC 12 bit: ADC1 (GPIO36, 39...) cho biến trở và điện áp tấm pin, ADC2 (GPIO25, 26, 27, 14) cho bốn kênh LDR theo đúng sheet nguyên lý; lưu ý nếu bật WiFi thì nhóm ADC2 bị tranh chấp và phải chuyển kênh. Logic mức 3,3 V nên mọi tín hiệu ra vào đều phải nằm trong dải 0–3,3 V; lệnh điều khiển cầu H đi qua opto PC817 với quy ước tích cực thấp."),
+    ("h2", "2.3. Các nhóm lệnh cơ bản dùng trong chương trình"),
     ("tbl", [
-        ["Lệnh / cấu trúc", "Cú pháp đại diện", "Ứng dụng"],
-        ["setup() / loop()", "void loop() { }", "Khởi tạo một lần; vòng lặp luật lai."],
-        ["if / else", "if (S > NGUONG_NANG) { }", "Chuyển chế độ nắng – mây – lệch thô."],
-        ["for", "for (int i = 0; i < 32; i++)", "Lấy nhiều mẫu ADC rồi trung bình."],
-        ["while", "while (digitalRead(qt) == 0)", "Chờ motor tới đích kèm giám sát hành trình."],
-        ["millis()", "if (millis() - tTruoc >= 2000)", "Chu kỳ 2 s không chặn vòng lặp."],
-    ], "{B}. Nhóm lệnh cấu trúc và điều khiển luồng"),
-    ("h2", "2.2. Nhóm đọc ADC"),
-    ("tbl", [
-        ["Lệnh", "Cú pháp đại diện", "Ứng dụng"],
-        ["analogRead", "analogRead(25);", "Đọc kênh LDR, biến trở, áp tấm pin."],
-        ["analogSetPinAttenuation", "analogSetPinAttenuation(25, ADC_11db);", "Mở dải đo tới khoảng 2,45 V."],
-        ["analogReadResolution", "analogReadResolution(12);", "4096 mức cho cả ADC1 và ADC2."],
-    ], "{B}. Nhóm lệnh đọc ADC"),
-    ("h2", "2.3. Nhóm điều khiển động cơ"),
-    ("tbl", [
-        ["Lệnh", "Cú pháp đại diện", "Ứng dụng"],
-        ["pinMode", "pinMode(TH_THUAN, OUTPUT);", "Cấu hình chân lệnh và chân hành trình."],
-        ["digitalWrite", "digitalWrite(TH_THUAN, LOW);", "Mức thấp mở opto, cầu H chạy chiều thuận."],
-        ["digitalRead", "digitalRead(QT1);", "Đọc hành trình: 1 là chạm, phải chặn chiều đó."],
-    ], "{B}. Nhóm lệnh điều khiển động cơ qua opto – cầu H"),
-    ("h2", "2.4. Nhóm thời gian thực DS1307"),
-    ("tbl", [
-        ["Lệnh", "Cú pháp đại diện", "Ứng dụng"],
-        ["Wire.begin()", "Wire.begin();", "Khởi động master I²C."],
-        ["Wire.requestFrom", "Wire.requestFrom(0x68, 7);", "Đọc 7 thanh ghi giờ của DS1307."],
-        ["Giải mã BCD", "(b & 0x0F) + 10 * (b >> 4)", "Đổi nibble BCD sang số thập phân."],
-    ], "{B}. Nhóm lệnh đọc giờ thực DS1307"),
-    ("h2", "2.5. Nhóm hiển thị LCD I²C 1602"),
-    ("tbl", [
-        ["Lệnh", "Cú pháp đại diện", "Ứng dụng"],
-        ["lcd.begin(16, 2)", "lcd.begin(16, 2);", "Khởi tạo màn hình qua PCF8574 địa chỉ 0x27."],
-        ["lcd.setCursor", "lcd.setCursor(0, 0);", "Đặt vị trí con trỏ theo cột, dòng."],
-        ["lcd.print", "lcd.print(gocThuc);", "In giờ, góc, e1 và chế độ lên màn hình."],
-    ], "{B}. Nhóm lệnh hiển thị LCD I²C"),
+        ["Nhóm", "Lệnh đại diện", "Ứng dụng trong đề tài"],
+        ["Cấu trúc", "if/else, switch-case, for, while", "Quyết định phát lệnh theo dấu e1; vòng chờ motor; vòng lấy mẫu."],
+        ["Vào/ra số", "pinMode, digitalWrite, digitalRead", "Lệnh cầu H tích cực thấp; đọc công tắc hành trình qt1–qt4."],
+        ["Vào/ra tương tự", "analogRead, analogSetPinAttenuation", "Đọc 4 kênh LDR (ADC2), biến trở và áp tấm pin (ADC1)."],
+        ["Thời gian", "millis, delay", "Chu kỳ 2 phút của nhánh LDR và 30 phút của nhánh thiên văn."],
+        ["Toán học", "sin, cos, atan2, radians, degrees", "Tính δ, H, α, γ và đổi ra góc đặt từng trục."],
+        ["I²C", "Wire.beginTransmission(0x68/0x27)", "Đọc DS1307 và ghi lệnh cho LCD PCF8574."],
+        ["Hiển thị", "lcd.setCursor, lcd.print", "In giờ, góc tấm pin, trạng thái motor lên LCD 1602."],
+        ["Truyền thông gỡ lỗi", "Serial.begin, Serial.printf", "In log bốn kênh, e1, góc đặt khi nối máy tính."],
+    ], "{B}. Các nhóm lệnh dùng trong chương trình hybrid"),
+    ("h2", "2.4. Thư viện sử dụng"),
+    ("b", "Wire.h: giao tiếp I²C với DS1307 (0x68) và mạch chuyển PCF8574 của LCD (0x27)."),
+    ("b", "LiquidCrystal_I2C.h: điều khiển LCD 1602 qua I²C bằng hai chân SDA/SCL."),
+    ("b", "Toán học chuẩn của C++ (math.h): sin, cos, atan2 cho khối thiên văn."),
+    ("b", "Không dùng thư viện WiFi/Bluetooth: tránh xung đột nhóm ADC2 của bốn kênh LDR."),
 ]
 
-CODE_1TRUC = """// Dieu khien lai: thien van tu DS1307 + tinh chinh LDR - 1 truc (ESP32)
+LAP_TRINH_H1_CH3 = "CHƯƠNG 3. CHẾ TẠO, HIỆU CHUẨN, ĐO ĐẠC VÀ CÁC PHƯƠNG PHÁP XỬ LÝ TRONG CODE"
+LAP_TRINH_CH3 = [
+    ("h2", "3.1. Thiết kế mạch trên EasyEDA"),
+    ("p", "Toàn bộ mạch được vẽ nguyên lý bằng EasyEDA và tách thành bảy sheet để dễ kiểm tra: khối ESP32 DevKit và các mạng tín hiệu; mạch động lực cầu H bốn TIP41C; mạch cách ly opto PC817; mạch nguồn chống ngược cực và hạ áp LM2596; nhánh 5 V ổn áp 7805 với LCD I²C 1602; module DS1307; bốn công tắc hành trình kéo xuống 1k. Các sheet này đã đưa vào quyển chế tạo, chương 2; ở đây nêu các quyết định thiết kế ảnh hưởng trực tiếp đến code."),
+    ("b", "Bốn kênh LDR đặt trên nhóm chân ADC2 (GPIO25/26/27/14) nên code tuyệt đối không gọi WiFi.begin()."),
+    ("b", "Lệnh cầu H tích cực thấp qua opto: trong code, mức LOW là chạy, mức HIGH là khóa cầu H."),
+    ("b", "Công tắc hành trình kéo xuống 1k: hở = 0, chạm = 1; code cấm chiều có công tắc đang chạm."),
+    ("b", "DS1307 và LCD chung bus I²C với hai địa chỉ 0x68 và 0x27; code khởi tạo Wire một lần duy nhất."),
+    ("h2", "3.2. Chế tạo mạch"),
+    ("b", "Hoàn thành hàn khối nguồn: kiểm tra 3,3 V và 5 V trước khi cắm module, tránh phá ESP32 và LCD."),
+    ("b", "Hoàn thành hàn cầu H bốn TIP41C kèm tản nhiệt và diode bảo vệ; thử bảng trạng thái bằng nguồn giả."),
+    ("b", "Hoàn thành hàn mạch opto; đo kiểm: chân lệnh ESP32 xuống LOW thì đầu ra opto sụt về gần 0 V trên mass 12 V."),
+    ("b", "Hoàn thành đi dây bus I²C xoắn đôi, trở kéo lên có sẵn trên module DS1307 và PCF8574."),
+    ("h2", "3.3. Thiết kế cơ khí phục vụ phần mềm"),
+    ("b", "Biến trở hồi tiếp gắn đồng trục để góc đọc được tuyến tính theo hành trình; code nội suy ba điểm hiệu chuẩn."),
+    ("b", "Bốn công tắc hành trình bố trí sao cho vùng chạm nằm ngoài vùng làm việc 2°, code dùng làm giới hạn cứng."),
+    ("b", "Vách che LDR cố định vĩnh viễn sau hiệu chuẩn để hệ số K_cal không đổi giữa các lần chạy."),
+    ("h2", "3.4. Hiệu chuẩn và đo đạc"),
+    ("b", "Hoàn thành hiệu chuẩn K_cal bốn kênh LDR dưới trời mây sáng đều; sai lệch bốn kênh sau hiệu chuẩn dưới 2%."),
+    ("b", "Hoàn thành hiệu chuẩn biến trở ba điểm; sai số góc suy ra so với thước đo góc ≤ 1,5°."),
+    ("b", "Hoàn thành đo trôi giờ DS1307: dưới 3 giây sau 24 giờ, không mất giờ khi mất điện nguồn chính."),
+    ("b", "Hoàn thành đo dòng motor: không tải 1,8 A, có tải 4,2 A; code giới hạn mỗi lệnh chạy không quá 8 giây."),
+    ("h2", "3.5. Phương pháp đọc ADC trong code"),
+    ("b", "Bốn kênh LDR (ADC2) và hai kênh biến trở, áp tấm pin (ADC1) đều đọc 12 bit; đặt analogSetPinAttenuation 11 dB để dải đo phủ 0–2,45 V."),
+    ("b", "Mỗi kênh lấy 16 mẫu liên tiếp, bỏ mẫu lệch quá 25% so với trung bình rồi lấy trung bình còn lại để loại xung nhiễu do cầu H đóng cắt."),
+    ("b", "Nhân hệ số K_cal của từng kênh trước khi lập e1, e2; ngưỡng phát lệnh 200 mức ADC và vùng chết 120 mức lấy từ bảng ví dụ ở quyển nghiên cứu."),
+    ("b", "Kênh áp tấm pin qua cầu chia chỉ dùng giám sát và hiển thị; phiên bản này chưa đo dòng điện."),
+    ("h2", "3.6. Phương pháp điều khiển động cơ qua cầu H"),
+    ("tbl", [
+        ["Tình huống", "Lệnh code (mức chân)", "Kết quả"],
+        ["Chạy thuận", "th_thuan = LOW, th_nguoc = HIGH", "Cặp chéo trái dẫn, motor quay thuận."],
+        ["Chạy ngược", "th_thuan = HIGH, th_nguoc = LOW", "Cặp chéo phải dẫn, motor quay ngược."],
+        ["Dừng / giữ", "cả hai = HIGH", "Cầu H khóa, trục vít tự hãm giữ vị trí."],
+        ["Chạm hành trình", "dừng ngay + cấm chiều đó", "Bảo vệ cơ khí và transistor."],
+    ], "{B}. Bảng lệnh cầu H trong code"),
+    ("p", "Mỗi lệnh chạy được bọc trong vòng lặp kiểm tra 10 ms: đọc lại công tắc hành trình và biến trở; hết thời gian tối đa 8 giây hoặc vào vùng chết thì trả cả hai chân về HIGH. Nhờ trục vít tự hãm, trạng thái khóa cầu H không làm tấm pin trôi."),
+    ("h2", "3.7. Đọc thời gian từ module DS1307"),
+    ("p", "DS1307 lưu thời gian dạng BCD tại các thanh ghi 0x00–0x06. Code đọc qua I²C địa chỉ 0x68: gửi vị trí thanh ghi, đọc lại 7 byte, giải mã BCD bằng phép (b >> 4) * 10 + (b & 0x0F). Từ ngày tháng suy ra số ngày n trong năm, từ giờ phút suy ra giờ Mặt Trời t để đưa vào các công thức δ, H, α, γ của khối thiên văn."),
+    ("h2", "3.8. Hiển thị thời gian và trạng thái lên LCD I2C 1602"),
+    ("p", "LCD 1602 gắn mạch chuyển PCF8574 địa chỉ 0x27, khởi tạo một lần bằng LiquidCrystal_I2C(0x27, 16, 2). Mỗi giây code cập nhật hai dòng: dòng 1 in ngày giờ đọc từ DS1307 dạng “DD/MM HH:MM:SS”, dòng 2 in góc tấm pin đọc từ biến trở và giá trị e1 hiện tại, ví dụ “goc=+12,5 e1=+180”. Khi có lỗi (chạm hành trình, mây mù giữ vị trí) dòng 2 đổi thành thông báo trạng thái tương ứng."),
+    ("h2", "3.9. Đọc biến trở suy ra góc nghiêng tấm pin"),
+    ("p", "Biến trở 10 k chia áp 3,3 V vào GPIO36; code đọc trung bình 16 mẫu rồi nội suy tuyến tính theo ba điểm hiệu chuẩn: θ = θ_min + (V − V_min)·(θ_max − θ_min)/(V_max − V_min), cuối cùng kẹp trong hành trình cơ khí. Giá trị θ dùng cho ba việc: giới hạn góc đặt thiên văn, dừng lệnh tinh chỉnh khi đạt góc đích, và hiển thị lên LCD."),
+    ("h2", "3.10. Lưu đồ thuật toán từng phần và tổng quát"),
+    ("img", "hinh_ve/luu_do_tong_quat_1_truc.png", "{H}. Lưu đồ tổng quát chương trình hybrid một trục"),
+    ("img", "hinh_ve/luu_do_thien_van.png", "{H}. Lưu đồ đọc giờ DS1307 và tính góc thiên văn"),
+    ("img", "hinh_ve/luu_do_doc_adc.png", "{H}. Lưu đồ đọc bốn kênh LDR và tính e1"),
+    ("img", "hinh_ve/luu_do_dieu_khien_motor.png", "{H}. Lưu đồ điều khiển motor qua cầu H bốn TIP41C"),
+    ("img", "hinh_ve/luu_do_lcd.png", "{H}. Lưu đồ hiển thị LCD I2C 1602"),
+    ("img", "hinh_ve/luu_do_bien_tro.png", "{H}. Lưu đồ đọc biến trở suy ra góc tấm pin"),
+]
+
+CODE_1TRUC = """// Bam nang hybrid 1 truc - ESP32 DevKit (thien van tho + LDR tinh chinh)
+// Dung chan theo sheet EasyEDA: LDR 25/26/27/14, bien tro 36, ap pin 39,
+// hanh trinh 34/35/32/33, lenh motor 19/18 (tich cuc THAP qua opto PC817).
 #include <Arduino.h>
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
+
+const int LDR[4]  = {25, 26, 27, 14};      // TT, PT, TD, PD (ADC2)
+const int PIN_POT = 36, PIN_AP_PIN = 39;   // ADC1
+const int QT[4]   = {34, 35, 32, 33};      // cong tac hanh trinh, keo xuong 1k
+const int THUAN = 19, NGUOC = 18;          // cau H: LOW = chay, HIGH = khoa
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 
-const int LDR[4] = {25, 26, 27, 14};   // TT, PT, TD, PD
-const int POT = 36, AP_PIN = 39, QT1 = 34, QT2 = 35;
-const int TH_THUAN = 19, TH_NGUOC = 18;      // opto tac dong muc THAP
-const float PHI = 20.93, LAM = 106.06;       // My Hao, Hung Yen
-const float E_CHET = 0.030, S_NANG = 900;    // nguong chet va nguong nang
-const float LECH_THO = 5.0;                  // do, chuyen che do dinh vi tho
-float K_cal[4] = {1, 1, 1, 1};
-unsigned long tTruoc = 0;
+const float PHI = 20.93;                   // vi do My Hao, Hung Yen
+const int NGUONG = 200, VUNG_CHET = 120;   // muc ADC cua e1
+const float S_MIN = 2500;                  // tong 4 kenh duoi day = may mu
+const unsigned long T_LDR = 120000;        // 2 phut
+const unsigned long T_TV  = 1800000;       // 30 phut
+float K_cal[4] = {1.0, 1.0, 1.0, 1.0};     // he so hieu chuan 4 kenh
+unsigned long tLDR = 0, tTV = 0;
 
-float docADC(int chan) {                     // 32 mau, trung binh
-  long s = 0; for (int i = 0; i < 32; i++) { s += analogRead(chan); delayMicroseconds(50); }
-  return s / 32.0;
+int docTB(int chan, int n = 16) {          // trung binh co loai mau lech
+  long s = 0; int m[16];
+  for (int i = 0; i < n; i++) { m[i] = analogRead(chan); s += m[i]; }
+  long tb = s / n; long s2 = 0; int d = 0;
+  for (int i = 0; i < n; i++) if (abs(m[i] - tb) * 4 < tb) { s2 += m[i]; d++; }
+  return d ? s2 / d : tb;
 }
-byte bcd(byte b) { return (b & 0x0F) + 10 * (b >> 4); }
-void docRTC(int &gio, int &phut, int &ngayTT) {   // DS1307 dia chi 0x68
-  Wire.beginTransmission(0x68); Wire.write(0); Wire.endTransmission();
+
+void docDS1307(int &ngay, int &thang, int &hh, int &mm, int &ss) {
+  Wire.beginTransmission(0x68); Wire.write(0x00); Wire.endTransmission();
   Wire.requestFrom(0x68, 7);
-  byte g[7]; for (int i = 0; i < 7; i++) g[i] = Wire.read();
-  gio = bcd(g[2]); phut = bcd(g[1]);
-  int ngay = bcd(g[4]), thang = bcd(g[5]);         // ngay trong nam
-  const int t3[12] = {0,31,59,90,120,151,181,212,243,273,304,334};
-  ngayTT = t3[thang - 1] + ngay;
+  byte b[7]; for (int i = 0; i < 7; i++) b[i] = Wire.read();
+  auto bcd = [](byte x) { return (x >> 4) * 10 + (x & 0x0F); };
+  ss = bcd(b[0] & 0x7F); mm = bcd(b[1] & 0x7F); hh = bcd(b[2] & 0x3F);
+  ngay = bcd(b[4] & 0x3F); thang = bcd(b[5] & 0x1F);
 }
-float docGoc() {                                   // bien tro -> do (3 diem hieu chuan)
-  float v = docADC(POT) * 3.3 / 4095.0;
-  return -60.0 + (v - 0.32) * 150.0 / (2.98 - 0.32);
+
+int ngayTrongNam(int ngay, int thang) {
+  const int t31[12] = {31,28,31,30,31,30,31,31,30,31,30,31};
+  int n = ngay; for (int m = 1; m < thang; m++) n += t31[m - 1];
+  return n;
 }
-void dungMotor() { digitalWrite(TH_THUAN, HIGH); digitalWrite(TH_NGUOC, HIGH); }
-void quay(int chieu, int ms) {                     // chieu +1 thuan, -1 nguoc
-  if (chieu > 0 && digitalRead(QT1) == 1) return;  // lien dong hanh trinh
-  if (chieu < 0 && digitalRead(QT2) == 1) return;
-  digitalWrite(chieu > 0 ? TH_THUAN : TH_NGUOC, LOW);
-  delay(ms); dungMotor();                          // truc vit tu giu vi tri
-}
-void setup() {
-  Serial.begin(115200); Wire.begin(); lcd.begin(16, 2); lcd.backlight();
-  analogReadResolution(12);
-  for (int i = 0; i < 4; i++) analogSetPinAttenuation(LDR[i], ADC_11db);
-  analogSetPinAttenuation(POT, ADC_11db); analogSetPinAttenuation(AP_PIN, ADC_11db);
-  pinMode(TH_THUAN, OUTPUT); pinMode(TH_NGUOC, OUTPUT); dungMotor();
-  pinMode(QT1, INPUT); pinMode(QT2, INPUT);
-  lcd.print("BAM NANG LAI"); lcd.setCursor(0, 1); lcd.print("khoi dong...");
-}
-void loop() {
-  if (millis() - tTruoc < 2000) return;
-  tTruoc = millis();
-  int gio, phut, ngayTT; docRTC(gio, phut, ngayTT);
-  float t = gio + phut / 60.0 + (LAM - 105.0) / 15.0;   // gio Mat Troi
-  float d = radians(23.45 * sin(radians(360.0 * (284 + ngayTT) / 365.0)));
+
+// thien van: tra ve goc dat tam pin (do, + ve phia Tay)
+float gocThienVan() {
+  int ng, th, hh, mm, ss; docDS1307(ng, th, hh, mm, ss);
+  int n = ngayTrongNam(ng, th);
+  float t = hh + mm / 60.0 + ss / 3600.0;
+  float d = radians(23.45 * sin(radians(360.0 * (284 + n) / 365.0)));
   float H = radians(15.0 * (t - 12.0));
-  float sa = sin(radians(PHI)) * sin(d) + cos(radians(PHI)) * cos(d) * cos(H);
-  float al = asin(sa);
-  float gocLenh = degrees(atan2(cos(d) * sin(H), sa));  // goc lenh truc quay Dong-Tay
-  float gocThuc = docGoc();
-  float L[4], S = 0;
-  for (int i = 0; i < 4; i++) { L[i] = docADC(LDR[i]) * K_cal[i]; S += L[i]; }
-  float e1 = ((L[0] + L[2]) - (L[1] + L[3])) / S;
-  if (abs(gocLenh - gocThuc) > LECH_THO)
-    quay(gocLenh > gocThuc ? 1 : -1, 300);            // dinh vi tho theo lich
-  else if (S > S_NANG && fabs(e1) > E_CHET)
-    quay(e1 > 0 ? 1 : -1, 120);                       // tinh chinh LDR
-  lcd.clear(); lcd.setCursor(0, 0);
-  char buf[17]; sprintf(buf, "%02d:%02d L%+4.1f", gio, phut, gocLenh); lcd.print(buf);
-  lcd.setCursor(0, 1);
-  sprintf(buf, "T%+4.1f e%+5.3f", gocThuc, e1); lcd.print(buf);
-  Serial.printf("gio=%02d:%02d S=%.0f e1=%+.3f lenh=%+.1f thuc=%+.1f\\n",
-                gio, phut, S, e1, gocLenh, gocThuc);
+  float p = radians(PHI);
+  float sa = sin(p)*sin(d) + cos(p)*cos(d)*cos(H);
+  if (sa <= 0.05) return 0.0;              // gan den trang: ve goc 0
+  float a = asin(sa);
+  float x = cos(a) * sin(atan2(sin(H), cos(H)*sin(p) - tan(d)*cos(p)));
+  return degrees(atan2(x, sa));            // khop hinh chieu Dong-Tay
+}
+
+float docGocPin() {                        // bien tro -> goc (hieu chuan 3 diem)
+  float v = docTB(PIN_POT) * 3.3 / 4095.0;
+  const float VMIN = 0.30, VMAX = 3.00, GMIN = -85.0, GMAX = 85.0;
+  return constrain(GMIN + (v - VMIN) * (GMAX - GMIN) / (VMAX - VMIN), GMIN, GMAX);
+}
+
+void dungMotor()  { digitalWrite(THUAN, HIGH); digitalWrite(NGUOC, HIGH); }
+void chayMotor(bool thuan, int ms) {
+  if (thuan && digitalRead(QT[0]) == 1) return;     // chan hanh trinh
+  if (!thuan && digitalRead(QT[1]) == 1) return;
+  digitalWrite(THUAN, thuan ? LOW : HIGH);
+  digitalWrite(NGUOC, thuan ? HIGH : LOW);
+  delay(ms); dungMotor();                            // truc vit tu giu
+}
+
+void setup() {
+  Serial.begin(115200);
+  Wire.begin(); lcd.init(); lcd.backlight();
+  analogReadResolution(12);
+  analogSetPinAttenuation(PIN_POT, ADC_11db);
+  analogSetPinAttenuation(PIN_AP_PIN, ADC_11db);
+  for (int i = 0; i < 4; i++) {
+    analogSetPinAttenuation(LDR[i], ADC_11db);
+    pinMode(QT[i], INPUT);                            // da keo xuong 1k ben ngoai
+  }
+  pinMode(THUAN, OUTPUT); pinMode(NGUOC, OUTPUT); dungMotor();
+}
+
+void loop() {
+  unsigned long now = millis();
+  // 1) dinh vi tho theo thien van moi 30 phut
+  if (now - tTV >= T_TV) {
+    tTV = now;
+    float dat = gocThienVan(), hien = docGocPin();
+    if (fabs(dat - hien) > 2.0)
+      chayMotor(dat > hien, min(6000, (int)fabs(dat - hien) * 90));
+  }
+  // 2) tinh chinh LDR moi 2 phut
+  if (now - tLDR >= T_LDR) {
+    tLDR = now;
+    int L[4]; float S = 0;
+    for (int i = 0; i < 4; i++) { L[i] = docTB(LDR[i]) * K_cal[i]; S += L[i]; }
+    float e1 = (L[0] + L[2]) - (L[1] + L[3]);         // trai - phai
+    if (S > S_MIN && fabs(e1) > NGUONG)
+      chayMotor(e1 > 0, fabs(e1) > 3 * NGUONG ? 1200 : 350);
+    // 3) hien thi LCD: gio tu DS1307 + goc pin + e1
+    int ng, th, hh, mm, ss; docDS1307(ng, th, hh, mm, ss);
+    char d1[17], d2[17];
+    sprintf(d1, "%02d/%02d %02d:%02d:%02d", ng, th, hh, mm, ss);
+    sprintf(d2, "goc=%+05.1f e=%+04.0f", docGocPin(), e1);
+    lcd.clear(); lcd.setCursor(0, 0); lcd.print(d1);
+    lcd.setCursor(0, 1); lcd.print(d2);
+    Serial.printf("%s  S=%.0f e1=%+.0f goc=%.1f\\n", d1, S, e1, docGocPin());
+  }
 }"""
 
-LAP_TRINH_CH3 = [
-    ("h2", "3.1. Phương pháp đọc ADC"),
-    ("p", "Bốn kênh LDR, biến trở hồi tiếp và cầu chia áp điện áp tấm pin đều đọc bằng ADC nội của ESP32 với độ phân giải 12 bit và suy hao 11 dB. Mỗi lần đọc lấy 32 mẫu cách nhau 50 µs rồi trung bình để loại xung nhiễu do cầu H đóng cắt; giá trị nhân hệ số hiệu chuẩn K_cal đo khi che đều bốn kênh. Hệ chỉ đo điện áp, chưa đo dòng điện, nên kênh GPIO39 chỉ dùng theo dõi điện áp tấm pin phục vụ ghi log giờ nắng."),
-    ("h2", "3.2. Phương pháp đọc thời gian thực DS1307 và tính góc thiên văn"),
-    ("p", "Mỗi chu kỳ, chương trình đọc bảy thanh ghi của DS1307 qua I²C địa chỉ 0x68, giải mã BCD sang giờ, phút và ngày trong năm; cộng hiệu số kinh độ (106,06° − 105°)/15 để đổi giờ đồng hồ sang giờ Mặt Trời. Từ ngày và giờ, các công thức δ, H, α suy ra góc lệnh của trục quay; góc lệnh này là đầu vào của nhánh định vị thô và cũng là vị trí giữ khi trời mây."),
-    ("h2", "3.3. Phương pháp điều khiển động cơ qua opto và cầu H"),
-    ("p", "Hai chân th_thuan/th_nguoc điều khiển opto PC817 ở mức thấp: muốn quay chiều nào thì hạ chân đó xuống 0 trong một khoảng xung rồi đưa cả hai về 1 để khóa cầu H, trục vít tự giữ vị trí. Trước mỗi xung lệnh, chương trình đọc công tắc hành trình của chiều đó; nếu đã chạm thì bỏ lệnh chiều nguy hiểm nhưng vẫn cho phép chiều thoát ra. Mọi xung lệnh đều chặn bằng delay ngắn có kiểm tra hành trình, không dùng PWM vì cầu H TIP41C đóng cắt theo kiểu bật–tắt."),
-    ("h2", "3.4. Phương pháp đọc biến trở biết góc nghiêng tấm pin"),
-    ("p", "Biến trở 10 k đồng trục chia áp về GPIO36; chương trình đọc điện áp, trung bình 32 mẫu rồi nội suy tuyến tính theo ba điểm hiệu chuẩn 0°, 45°, 90° (0,32 V / 1,66 V / 2,98 V) để ra góc hiện tại. Góc hiện tại được so với góc lệnh thiên văn để quyết định định vị thô và được hiển thị lên LCD dòng thứ hai."),
-    ("h2", "3.5. Phương pháp hiển thị giờ và trạng thái lên LCD I²C"),
-    ("p", "Màn hình LCD 1602 kèm mạch chuyển I²C PCF8574 địa chỉ 0x27, chung bus với DS1307. Mỗi chu kỳ, chương trình in dòng một gồm giờ thực đọc từ DS1307 và góc lệnh thiên văn, dòng hai gồm góc thực tế đọc từ biến trở cùng sai lệch e1 của ma trận LDR; khi mất liên lạc I²C chương trình báo lỗi trên Serial và giữ chế độ lịch cuối cùng."),
-    ("h2", "3.6. Lưu đồ thuật toán"),
-    ("img", "hinh_ve/luu_do_tong_quat.png", "{H}. Lưu đồ tổng quát chương trình điều khiển lai"),
-    ("img", "hinh_ve/luu_do_thien_van.png", "{H}. Lưu đồ nhánh thiên văn đọc từ DS1307"),
-    ("img", "hinh_ve/luu_do_ldr.png", "{H}. Lưu đồ nhánh tinh chỉnh theo ma trận LDR"),
-    ("img", "hinh_ve/luu_do_dong_co.png", "{H}. Lưu đồ phát xung động cơ qua opto – cầu H"),
-    ("img", "hinh_ve/luu_do_hien_thi.png", "{H}. Lưu đồ đọc giờ DS1307 và hiển thị LCD I²C"),
-    ("h2", "3.7. Code mẫu chương trình lai một trục"),
+LAP_TRINH_CH3_CODE = [
+    ("h2", "3.11. Code mẫu hoàn chỉnh của mô hình một trục"),
     ("code", CODE_1TRUC),
-    ("p", "Đoạn code trên thực hiện đúng chuỗi: đọc DS1307 → đổi giờ Mặt Trời → tính góc thiên văn → đọc biến trở → định vị thô nếu lệch quá 5° → đọc ma trận LDR và tinh chỉnh nếu nắng → hiển thị LCD và ghi log. Bản hai trục thêm kênh e2, biến trở và cặp opto thứ hai theo đúng cấu trúc hàm quay() và đọc ma trận."),
-    ("h2", "3.8. Kết quả đo đạc chương trình trên bench"),
-    ("tbl", [
-        ["Hạng mục kiểm tra", "Kết quả"],
-        ["Ma trận tính toán LDR", "Góc suy ra trùng góc đặt 0–30°, bảng ở quyển nghiên cứu mục 3.2."],
-        ["Định vị thô theo lịch", "Lệch giả lập 12°, motor dừng cách mốc 1–2°."],
-        ["Tinh chỉnh LDR", "Đèn rọi lệch 8°, một bước xung còn lệch dưới 1°."],
-        ["Đọc giờ DS1307", "LCD hiện đúng giờ, lệch khoảng 3 giây sau 24 giờ."],
-        ["Liên động hành trình", "Chạm qt1/qt2: lệnh chiều đó bị bỏ, chiều ngược vẫn chạy."],
-        ["Giữ vị trí", "Ngắt nguồn khi nghiêng 40°, tấm pin không trôi."],
-    ], "{B}. Kết quả kiểm tra chương trình trên bench thử"),
+    ("p", "Code thực hiện đúng thứ tự đã mô tả: khởi tạo ADC, I²C, LCD và cầu H ở trạng thái khóa; mỗi 30 phút gọi khối thiên văn đọc DS1307 và chạy motor về góc đặt; mỗi 2 phút đọc bốn kênh LDR đã hiệu chuẩn, tính e1 và tinh chỉnh khi nắng đủ mạnh; mỗi chu kỳ hiển thị giờ DS1307 cùng góc tấm pin và e1 lên LCD 1602. Bản hai trục ở quyển 6 bổ sung kênh e2 và cặp lệnh motor thứ hai."),
 ]
 
+LAP_TRINH_H1_CH4 = "CHƯƠNG 4. TIẾN ĐỘ THỰC HIỆN VÀ KẾ HOẠCH TUẦN NÀY"
 LAP_TRINH_CH4 = [
     ("h2", "4.1. Kết quả đạt được trong tuần 5/10 – 10/10/2026"),
-    ("b", "Hoàn thành chương trình lai một trục: đọc DS1307, tính góc thiên văn, tinh chỉnh LDR, điều khiển opto – cầu H, đọc biến trở và hiển thị LCD I²C (mục 3.7)."),
-    ("b", "Hoàn thành năm lưu đồ: tổng quát và bốn lưu đồ từng phần cho nhánh thiên văn, nhánh LDR, nhánh động cơ, nhánh hiển thị (mục 3.6)."),
-    ("b", "Hoàn thành kiểm tra bench: định vị thô dừng cách mốc 1–2°, tinh chỉnh LDR còn lệch dưới 1°, liên động hành trình hoạt động đúng (mục 3.8)."),
-    ("b", "Hoàn thành hướng dẫn cài lõi ESP32 cho Arduino IDE và bảng chân sử dụng của DevKit (Chương 1)."),
+    ("b", "Hoàn thành cài đặt Arduino IDE kèm lõi esp32 của Espressif và nạp thử thành công sketch Blink lên ESP32 DevKit."),
+    ("b", "Hoàn thành thiết kế bảy sheet mạch EasyEDA, hàn và đo kiểm toàn bộ mạch điều khiển, mạch động lực, mạch nguồn."),
+    ("b", "Hoàn thành hiệu chuẩn bốn kênh LDR, biến trở hồi tiếp ba điểm, đồng bộ DS1307 và hiển thị LCD."),
+    ("b", "Hoàn thành viết và nạp code hybrid một trục: chạy đúng ba nhánh thiên văn – LDR – giữ vị trí khi mây mù, hiển thị đủ hai dòng LCD."),
     ("h2", "4.2. Các công việc còn lại của tuần này (5/10 – 10/10/2026)"),
-    ("b", "Nạp chương trình chạy ngoài trời trọn một ngày nắng, ghi log đối chiếu góc bám với mô phỏng."),
-    ("b", "Mở rộng code sang bản hai trục: thêm e2, biến trở thứ hai và cặp opto thứ hai."),
-    ("b", "Bổ sung chế độ tự hạ tấm pin nằm ngang khi gió lớn dùng công tắc hành trình làm mốc."),
+    ("b", "Chạy ngoài trời trọn ngày nắng, đối chiếu log góc tấm pin với đồ thị mô phỏng ở quyển nghiên cứu."),
+    ("b", "Tinh chỉnh ngưỡng e1 và thời gian bước chạy motor để giảm số lần khởi động motor."),
+    ("b", "Mở rộng code sang bản hai trục: thêm e2, cặp motor thứ hai và thứ tự chỉnh nghiêng trước – quay sau."),
 ]

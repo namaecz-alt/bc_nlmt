@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
-"""Ve so do / hinh minh hoa phong cach ban ve ky thuat don gian (nen trang,
-net den manh, it mau) de giong ban ve EasyEDA / ban ve tay, kem bo 7 so do
-mach ve lai thiet ke EasyEDA cua de tai.
+"""Ve so do / luu do theo phong cach ban ve ky thuat: nen trang, net manh,
+chu den, it mau - dung cho 6 quyen bao cao phuong phap hybrid.
 
 Chay:  python3 tools/ve_hinh.py
 """
@@ -12,504 +11,377 @@ import textwrap
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from matplotlib.patches import FancyBboxPatch, Polygon, Rectangle, Circle
+from matplotlib.patches import FancyBboxPatch, Polygon, Rectangle
 
 OUT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "hinh_ve")
-MACH = os.path.join(OUT, "mach")
-
-INK = "#101010"
-NET = "#1a56b0"
-RED = "#b03030"
-
-
-def _w(t, w=30):
-    return "\n".join("\n".join(textwrap.wrap(ln, w)) if ln.strip() else ""
-                     for ln in t.split("\n"))
+EDGE = "#222222"
+FILL = "#ffffff"
+FILL2 = "#f2f2f2"
+TXT = "#111111"
 
 
-def fig(w, h, xl, yl):
-    f, ax = plt.subplots(figsize=(w, h), dpi=200)
-    f.patch.set_facecolor("white")
+def _w(t, n=30):
+    out = []
+    for ln in t.split("\n"):
+        out.extend(textwrap.wrap(ln, n) if ln.strip() else [""])
+    return "\n".join(out)
+
+
+def new_fig(w, h, xlim, ylim):
+    fig, ax = plt.subplots(figsize=(w, h), dpi=200)
+    fig.patch.set_facecolor("white")
     ax.set_facecolor("white")
-    ax.set_xlim(*xl)
-    ax.set_ylim(*yl)
+    ax.set_xlim(*xlim)
+    ax.set_ylim(*ylim)
     ax.set_aspect("equal")
     ax.axis("off")
-    return f, ax
+    return fig, ax
 
 
-def rbox(ax, cx, cy, w, h, text, fs=8.6, wrap=26, lw=1.2, fc="white"):
-    ax.add_patch(Rectangle((cx - w / 2, cy - h / 2), w, h, fc=fc, ec=INK, lw=lw))
-    if text:
-        ax.text(cx, cy, _w(text, wrap), ha="center", va="center", color=INK,
-                fontsize=fs, linespacing=1.3)
+def box(ax, cx, cy, w, h, text, fs=8.0, fill=FILL, wrap=28, round_=False):
+    if round_:
+        ax.add_patch(FancyBboxPatch((cx - w / 2, cy - h / 2), w, h,
+                                    boxstyle="round,pad=0,rounding_size=1.6",
+                                    fc=fill, ec=EDGE, lw=0.9))
+    else:
+        ax.add_patch(Rectangle((cx - w / 2, cy - h / 2), w, h, fc=fill, ec=EDGE, lw=0.9))
+    ax.text(cx, cy, _w(text, wrap), ha="center", va="center", color=TXT,
+            fontsize=fs, linespacing=1.3)
 
 
-def line(ax, x1, y1, x2, y2, lw=1.0, c=INK):
-    ax.plot([x1, x2], [y1, y2], color=c, lw=lw, solid_capstyle="round")
+def dec(ax, cx, cy, w, h, text, fs=7.6, wrap=24):
+    ax.add_patch(Polygon([(cx, cy + h / 2), (cx + w / 2, cy), (cx, cy - h / 2),
+                          (cx - w / 2, cy)], closed=True, fc=FILL, ec=EDGE, lw=0.9))
+    ax.text(cx, cy, _w(text, wrap), ha="center", va="center", color=TXT,
+            fontsize=fs, linespacing=1.25)
 
 
-def arr(ax, x1, y1, x2, y2, c=INK, lw=1.0):
+def arr(ax, x1, y1, x2, y2, label=None, lx=None, ly=None, fs=7.4):
     ax.annotate("", xy=(x2, y2), xytext=(x1, y1),
-                arrowprops=dict(arrowstyle="-|>", color=c, lw=lw, shrinkA=0, shrinkB=0))
+                arrowprops=dict(arrowstyle="-|>", color=EDGE, lw=0.9, shrinkA=0, shrinkB=0))
+    if label:
+        ax.text(lx if lx is not None else (x1 + x2) / 2 + 1.2,
+                ly if ly is not None else (y1 + y2) / 2, label,
+                ha="left", va="center", color=TXT, fontsize=fs)
 
 
-def dot(ax, x, y, c=INK):
-    ax.add_patch(Circle((x, y), 0.55, fc=c, ec=c))
+def line(ax, x1, y1, x2, y2, lw=0.9):
+    ax.plot([x1, x2], [y1, y2], color=EDGE, lw=lw)
 
 
-def txt(ax, x, y, t, fs=8.4, ha="center", va="center", c=INK, bold=False):
-    ax.text(x, y, t, ha=ha, va=va, color=c, fontsize=fs,
-            fontweight="bold" if bold else "normal")
+def title(ax, x, y, text, fs=10.5):
+    ax.text(x, y, text, ha="center", va="center", color=TXT, fontsize=fs, fontweight="bold")
 
 
-def netflag(ax, x, y, name, dx=0, ha="left"):
-    """Nhan mang kieu EasyEDA (mui ten ngũ giac)."""
-    s = 1 if ha == "left" else -1
-    pts = [(x, y - 1.1), (x + s * 4.2, y - 1.1), (x + s * 5.6, y),
-           (x + s * 4.2, y + 1.1), (x, y + 1.1)]
-    ax.add_patch(Polygon(pts, closed=True, fc="white", ec=NET, lw=1.0))
-    txt(ax, x - s * 0.8, y, name, fs=8.0, ha="right" if ha == "left" else "left", c=NET)
+def save(fig, name):
+    os.makedirs(OUT, exist_ok=True)
+    p = os.path.join(OUT, name)
+    fig.savefig(p, facecolor="white", bbox_inches="tight", pad_inches=0.18)
+    plt.close(fig)
+    print("da ve:", name)
 
 
-def gnd(ax, x, y, label="GND"):
-    line(ax, x, y, x, y - 1.6)
-    for i, w in enumerate((3.2, 2.2, 1.2)):
-        line(ax, x - w / 2, y - 1.6 - i * 0.8, x + w / 2, y - 1.6 - i * 0.8, lw=1.0)
-    txt(ax, x, y - 4.6, label, fs=8.2)
+# ------------------------------------------------------------------ so do khoi
+def so_do_khoi(truc=1):
+    hai = (truc == 2)
+    fig, ax = new_fig(10.6, 6.6, (0, 106), (0, 66))
+    box(ax, 16, 54, 26, 9, "Cụm 4 LDR + mạch chia áp\n(4 kênh 0–3,3 V)", fs=7.8, wrap=26)
+    box(ax, 16, 41, 26, 8, "Biến trở chia áp\nhồi tiếp góc tấm pin" + ("" if not hai else " (2 cái)"), fs=7.8, wrap=26)
+    box(ax, 16, 28, 26, 8, "Module RTC DS1307\n(bus I²C)", fs=7.8, wrap=26)
+    box(ax, 16, 15, 26, 8, "Công tắc hành trình\n+ nút dừng khẩn cấp", fs=7.8, wrap=26)
+    box(ax, 52, 40, 26, 16, "ESP32 DevKit\nđọc ADC, tính thiên văn,\nso sánh e1/e2, phát lệnh,\nhiển thị LCD", fs=8.2, wrap=24)
+    box(ax, 52, 18, 26, 9, "LCD I2C 1602\nhiển thị giờ, góc, trạng thái", fs=7.8, wrap=26)
+    nb = 2 if hai else 1
+    for i in range(nb):
+        y = 46 - i * 16
+        box(ax, 86, y, 24, 10, "Mạch cầu H 4 TIP41C\n(mạch động lực %d)" % (i + 1), fs=7.8, wrap=24)
+        box(ax, 86, y - 13, 24, 8, "Motor gạt nước 12 V\ntrục vít tự hãm", fs=7.8, wrap=24)
+        arr(ax, 86, y - 5, 86, y - 9)
+        arr(ax, 65, 40, 74, y)
+    arr(ax, 29, 54, 39, 45)
+    arr(ax, 29, 41, 39, 41)
+    arr(ax, 29, 28, 39, 36)
+    arr(ax, 29, 15, 39, 33)
+    arr(ax, 52, 32, 52, 22.5)
+    box(ax, 52, 6, 40, 6, "Nguồn 12 V (ắc quy) → mạch động lực;  mạch ổn áp 5 V/3,3 V → ESP32, LCD", fs=7.6, wrap=60)
+    ax.text(97, 60, "Trục vít tự hãm:\ngiữ vị trí khi ngắt điện", fontsize=7.6, color=TXT,
+            ha="left", va="center")
+    title(ax, 53, 64, "SƠ ĐỒ KHỐI HỆ THỐNG BÁM NẮNG %s TRỤC – PHƯƠNG PHÁP HYBRID"
+          % ("MỘT" if not hai else "HAI"))
+    save(fig, "so_do_khoi_%d_truc.png" % truc)
 
 
-def vcc(ax, x, y, label="VCC"):
-    line(ax, x, y, x, y + 1.4)
-    line(ax, x - 1.8, y + 1.4, x + 1.8, y + 1.4, lw=1.2)
-    txt(ax, x, y + 2.6, label, fs=8.2)
+# ------------------------------------------------------------------ so do ket noi
+def so_do_ket_noi(truc=1):
+    hai = (truc == 2)
+    fig, ax = new_fig(11.0, 6.2, (0, 110), (0, 62))
+    box(ax, 55, 31, 30, 44, "", fill=FILL2)
+    ax.text(55, 50, "ESP32 DEVKIT", ha="center", va="center", fontsize=10, fontweight="bold", color=TXT)
+    left = [("4 kênh LDR (chia áp)", "GPIO36 / 39 / 34 / 35"),
+            ("Biến trở góc quay", "GPIO32 (ADC)")]
+    if hai:
+        left.append(("Biến trở góc nghiêng", "GPIO33 (ADC)"))
+    left += [("RTC DS1307 (I²C)", "GPIO21 SDA / GPIO22 SCL"),
+             ("LCD I2C 1602 (I²C)", "chung bus 21 / 22")]
+    right = [("Cầu H 1: IN1, IN2", "GPIO26 / GPIO27")]
+    if hai:
+        right.append(("Cầu H 2: IN3, IN4", "GPIO14 / GPIO13"))
+    right += [("CT hành trình", "GPIO4 / GPIO5" + (" / 18 / 19" if hai else "")),
+              ("Nút dừng khẩn cấp", "GPIO18" if not hai else "GPIO25")]
+    y = 44
+    for name, pin in left:
+        box(ax, 16, y, 26, 6, name, fs=7.6, wrap=26)
+        line(ax, 29, y, 40, y)
+        ax.text(41, y, pin, fontsize=6.9, ha="left", va="center", color=TXT)
+        y -= 7.4
+    y = 44
+    for name, pin in right:
+        box(ax, 94, y, 26, 6, name, fs=7.6, wrap=26)
+        line(ax, 70, y, 81, y)
+        ax.text(69, y, pin, fontsize=6.9, ha="right", va="center", color=TXT)
+        y -= 7.4
+    title(ax, 55, 58, "SƠ ĐỒ KẾT NỐI ESP32 DEVKIT – HỆ %s TRỤC" % ("MỘT" if not hai else "HAI"))
+    ax.text(55, 2, "ADC của ESP32 chỉ đo điện áp (0–3,3 V): 4 kênh LDR và biến trở hồi tiếp; "
+                   "không đo dòng điện trong thiết kế này.", fontsize=7.6, ha="center", color=TXT)
+    save(fig, "so_do_ket_noi_%d_truc.png" % truc)
 
 
-def save(f, name, sub=None):
-    d = MACH if sub == "mach" else OUT
-    os.makedirs(d, exist_ok=True)
-    p = os.path.join(d, name)
-    f.savefig(p, facecolor="white", bbox_inches="tight", pad_inches=0.18)
-    plt.close(f)
-    print("da ve:", os.path.relpath(p, os.path.dirname(OUT)))
+# ------------------------------------------------------------------ 3 phuong phap
+def so_do_3_phuong_phap():
+    fig, ax = new_fig(10.6, 7.4, (0, 106), (0, 74))
+    rows = [("a) Nhóm 1 – Vòng hở theo thời gian (thiên văn)", 60,
+             [("RTC DS1307\nđọc ngày, giờ", 14), ("Tính δ, H, α, γ\ntheo công thức", 36),
+              ("Đổi ra góc đặt\ncủa tấm pin", 58), ("Cầu H chạy motor\ntới góc đặt", 80)], None),
+            ("b) Nhóm 2 – Vòng kín cảm biến LDR", 38,
+             [("4 LDR + vách che\nđọc 4 mức sáng", 14), ("e1 = trái − phải\ne2 = trên − dưới", 36),
+              ("|e| > ngưỡng?\nso dấu, vùng chết", 58), ("Cầu H quay đúng chiều\nđến khi cân bằng", 80)],
+             "tấm pin gắn cụm LDR"),
+            ("c) Nhóm 3 – HYBRID (đề tài chọn)", 14,
+             [("RTC + công thức\nthiên văn: định vị thô", 14), ("4 LDR: tinh chỉnh\nquanh vị trí cân bằng", 38),
+              ("Trời mây mù?\ngiữ vị trí theo lịch", 62), ("Cầu H chạy motor\ntheo lệnh tổng hợp", 84)], None)]
+    for t, y0, cells, note in rows:
+        ax.text(2, y0 + 8.5, t, fontsize=8.6, fontweight="bold", color=TXT, va="center")
+        xs = [c[1] for c in cells]
+        for i, (txt, x) in enumerate(cells):
+            box(ax, x, y0, 20, 10, txt, fs=7.4, wrap=20)
+            if i:
+                arr(ax, xs[i - 1] + 10, y0, x - 10, y0)
+        if note:
+            line(ax, 80, y0 - 5, 80, y0 - 8)
+            line(ax, 80, y0 - 8, 14, y0 - 8)
+            arr(ax, 14, y0 - 8, 14, y0 - 5)
+            ax.text(48, y0 - 10, note + " (hồi tiếp quang)", fontsize=7.2, ha="center", color=TXT)
+    title(ax, 53, 72, "BA NHÓM PHƯƠNG PHÁP BÁM NẮNG XEM XÉT TRONG ĐỀ TÀI")
+    save(fig, "so_do_3_phuong_phap.png")
 
 
-# ============================================================== so do khoi
-def so_do_khoi(axis=1):
-    f, ax = fig(11.2, 6.4, (0, 112), (0, 66))
-    txt(ax, 56, 63.5, "SƠ ĐỒ KHỐI HỆ THỐNG BÁM NẮNG %s TRỤC (ĐIỀU KHIỂN LAI)"
-        % ("MỘT" if axis == 1 else "HAI"), fs=12, bold=True)
-    rbox(ax, 15, 50, 24, 10, "Ma trận 4 LDR\ncó vách che giữa\n(4 góc tấm pin)")
-    rbox(ax, 15, 35, 24, 8, "Biến trở hồi tiếp\ngóc tấm pin")
-    rbox(ax, 15, 22, 24, 8, "Cầu chia áp đo\nđiện áp tấm pin")
-    rbox(ax, 48, 55, 26, 9, "DS1307 (I²C)\ngiờ thực cho luật\nthiên văn")
-    rbox(ax, 48, 40, 26, 14, "ESP32 DevKit\n– tính góc thiên văn\n– đọc ma trận LDR\n– suy lệch & tinh chỉnh")
-    rbox(ax, 48, 22, 26, 8, "LCD I²C 1602\nhiển thị giờ, góc,\ntrạng thái")
-    rbox(ax, 84, 50, 24, 10, "Opto PC817 →\ncầu H 4×TIP41C →\nđộng cơ trục vít")
-    rbox(ax, 84, 34, 24, 8, "Công tắc hành trình\nqt1…qt4")
-    rbox(ax, 84, 20, 24, 8, "Tấm pin 100 W\n(4 kg)")
-    rbox(ax, 48, 8, 60, 7, "Nguồn 12 V → 1N4007 → LM2596 (3,3 V) và 7805 (5 V)")
-    arr(ax, 27, 50, 35, 44); arr(ax, 27, 35, 35, 38); arr(ax, 27, 22, 35, 34)
-    arr(ax, 48, 50.5, 48, 47)
-    arr(ax, 61, 44, 72, 48); arr(ax, 72, 36, 61, 38)
-    arr(ax, 84, 45, 84, 38); arr(ax, 84, 30, 84, 24)
-    arr(ax, 61, 36, 68, 26); arr(ax, 68, 22, 61, 20)
-    line(ax, 48, 8, 20, 8); line(ax, 20, 8, 20, 18); arr(ax, 20, 18, 20, 18.001)
-    line(ax, 78, 8, 96, 8); line(ax, 96, 8, 96, 16); arr(ax, 96, 16, 96, 16.001)
-    txt(ax, 33, 52, "ADC", fs=7.6, c=NET)
-    txt(ax, 66, 46.5, "lệnh quay", fs=7.6, c=NET)
-    txt(ax, 66, 34.5, "hồi tiếp", fs=7.6, c=NET)
-    if axis == 2:
-        txt(ax, 84, 57, "(hai kênh giống nhau:\nnghiêng + phương vị)", fs=7.6)
-    save(f, "so_do_khoi_%d_truc.png" % axis)
-
-
-# ============================================================== so do ket noi
-def so_do_ket_noi(axis=1):
-    f, ax = fig(11.6, 7.4, (0, 116), (0, 76))
-    txt(ax, 58, 73.5, "SƠ ĐỒ KẾT NỐI ESP32 DEVKIT – HỆ %s TRỤC"
-        % ("MỘT" if axis == 1 else "HAI"), fs=12, bold=True)
-    ax.add_patch(Rectangle((44, 12), 28, 54, fc="white", ec=INK, lw=1.4))
-    txt(ax, 58, 62, "ESP32 DevKit", fs=10, bold=True)
-    left = [("GPIO25", "LDR trên-trái"), ("GPIO26", "LDR trên-phải"),
-            ("GPIO27", "LDR dưới-trái"), ("GPIO14", "LDR dưới-phải"),
-            ("GPIO36", "Biến trở hồi tiếp góc"),
-            ("GPIO39", "Cầu chia áp tấm pin" if axis == 1 else "Biến trở hồi tiếp 2"),
-            ("GPIO34", "qt1 hành trình"), ("GPIO35", "qt2 hành trình")]
-    if axis == 2:
-        left += [("GPIO32", "qt3 hành trình"), ("GPIO33", "qt4 hành trình")]
-    right = [("GPIO21", "SDA (DS1307, LCD)"), ("GPIO22", "SCL (DS1307, LCD)"),
-             ("GPIO19", "th_thuan (opto PH)"), ("GPIO18", "th_nguoc (opto PH)")]
-    if axis == 2:
-        right += [("GPIO5", "th_thuan trục 2"), ("GPIO13", "th_nguoc trục 2")]
-    right += [("3V3", "Nguồn logic"), ("GND", "Mass chung")]
-    y = 57
-    for pin, name in left:
-        txt(ax, 46.5, y, pin, fs=7.6, ha="left")
-        line(ax, 44, y, 34, y)
-        txt(ax, 33, y, name, fs=7.8, ha="right")
-        y -= 4.6
-    y = 57
-    for pin, name in right:
-        txt(ax, 69.5, y, pin, fs=7.6, ha="right")
-        line(ax, 72, y, 82, y)
-        txt(ax, 83, y, name, fs=7.8, ha="left")
-        y -= 4.6
-    txt(ax, 58, 15, "Không dùng WiFi khi chạy:\nbốn kênh LDR đặt trên ADC2", fs=7.8)
-    txt(ax, 58, 7.5, "Opto PC817 cách ly tín hiệu 3,3 V với mạch động lực 12 V", fs=7.8)
-    save(f, "so_do_ket_noi_%d_truc.png" % axis)
-
-
-# ============================================================== bo tri LDR co vach che
+# ------------------------------------------------------------------ bo tri LDR + vach che
 def bo_tri_ldr():
-    f, (a1, a2) = plt.subplots(1, 2, figsize=(10.6, 4.8), dpi=200,
-                               gridspec_kw={"width_ratios": [1.1, 1]})
-    f.patch.set_facecolor("white")
+    fig, (a1, a2) = plt.subplots(1, 2, figsize=(10.4, 4.8), dpi=200,
+                                 gridspec_kw={"width_ratios": [1.1, 1]})
+    fig.patch.set_facecolor("white")
     for a in (a1, a2):
         a.set_facecolor("white")
         a.axis("off")
         a.set_aspect("equal")
     a1.set_xlim(-6, 106)
-    a1.set_ylim(-8, 74)
-    a1.add_patch(Rectangle((10, 8), 80, 54, fc="white", ec=INK, lw=1.4))
-    line(a1, 50, 8, 50, 62, lw=1.2)          # vach che chu thap
-    line(a1, 10, 35, 90, 35, lw=1.2)
-    txt(a1, 50, 68, "Mặt trước tấm pin: 4 LDR ở 4 góc, vách che chữ thập giữa", fs=9, bold=True)
-    for (x, y, name) in ((24, 48, "L_TT"), (76, 48, "L_PT"), (24, 20, "L_TD"), (76, 20, "L_PD")):
-        a1.add_patch(Circle((x, y), 4.0, fc="white", ec=INK, lw=1.2))
-        txt(a1, x, y - 7.5, name, fs=8.4)
-    txt(a1, 50, 0, "Vách che tạo bóng chênh lệch khi lệch hướng", fs=8.4)
+    a1.set_ylim(-12, 76)
+    a1.add_patch(Rectangle((10, 8), 80, 54, fc="white", ec=EDGE, lw=1.2))
+    a1.add_patch(Rectangle((48.5, 8), 3, 54, fc="#dddddd", ec=EDGE, lw=0.8))
+    a1.text(50, 66, "vách che giữa", ha="center", va="center", fontsize=7.6, color=TXT)
+    pos = {"L_trái trên": (20, 52), "L_phải trên": (80, 52),
+           "L_trái dưới": (20, 18), "L_phải dưới": (80, 18)}
+    for k, (x, y) in pos.items():
+        a1.add_patch(plt.Circle((x, y), 4.0, fc="white", ec=EDGE, lw=1.1))
+        a1.text(x, y - 8.5, k.replace("_", " "), ha="center", va="center", fontsize=7.6, color=TXT)
+    a1.text(50, 35, "tấm pin\n(nhìn thẳng)", ha="center", va="center", fontsize=8, color="#555555")
+    a1.text(50, -6, "Bốn LDR ở bốn góc, vách che giữa tạo bóng lệch khi nắng xiên",
+            ha="center", va="center", fontsize=8, color=TXT)
     a2.set_xlim(-6, 106)
-    a2.set_ylim(-10, 70)
-    line(a2, 10, 20, 90, 20, lw=1.4)
-    txt(a2, 50, 15, "bề mặt tấm pin", fs=8.4)
-    line(a2, 50, 20, 50, 58, lw=1.0)
-    a2.plot([50, 76], [20, 54], color=INK, lw=1.2)
-    arr(a2, 76, 54, 84, 64, lw=1.2)
-    txt(a2, 86, 66, "trục cảm quang LDR", fs=8.4, ha="left")
-    txt(a2, 52, 60, "pháp tuyến", fs=8.4, ha="left")
-    a2.add_patch(Rectangle((48.6, 20), 2.8, 12, fc="white", ec=INK, lw=1.2))
-    txt(a2, 44, 30, "vách che", fs=8.0, ha="right")
-    th = [50 + 13 * math.cos(math.radians(t)) for t in range(52, 91)]
-    thy = [20 + 13 * math.sin(math.radians(t)) for t in range(52, 91)]
-    a2.plot(th, thy, color=INK, lw=1.0)
-    txt(a2, 62, 36, "β_s = 30°", fs=9)
-    txt(a2, 50, -4, "Mặt cắt: góc gá β_s và vách che giữa cụm", fs=8.4)
-    f.tight_layout()
-    save(f, "bo_tri_4_ldr.png")
+    a2.set_ylim(-14, 72)
+    line(a2, 10, 18, 90, 18, 1.4)
+    a2.text(50, 13.5, "mặt tấm pin", ha="center", fontsize=8, color=TXT)
+    line(a2, 50, 18, 50, 58)
+    a2.text(51.5, 60, "pháp tuyến", fontsize=8, color=TXT, ha="left")
+    a2.add_patch(Rectangle((48.8, 18), 2.4, 26, fc="#dddddd", ec=EDGE, lw=0.8))
+    a2.text(50, 47, "vách che", fontsize=7.4, ha="center", color=TXT)
+    for sx, lab in ((26, "LDR trái"), (74, "LDR phải")):
+        a2.add_patch(plt.Circle((sx, 21), 3.2, fc="white", ec=EDGE, lw=1.1))
+        a2.plot([sx, sx + (10 if sx > 50 else -10)], [21, 40], color=EDGE, lw=1.0)
+        a2.text(sx + (12 if sx > 50 else -12), 43, lab, fontsize=7.6, ha="center", color=TXT)
+    th = [50 + 13 * math.cos(math.radians(t)) for t in range(60, 91)]
+    thy = [18 + 13 * math.sin(math.radians(t)) for t in range(60, 91)]
+    a2.plot(th, thy, color=EDGE, lw=0.9)
+    a2.text(39, 32, "β_s", fontsize=9, color=TXT)
+    a2.text(50, -8, "Mặt cắt: vách che làm một bên LDR bị bóng khi nắng lệch",
+            ha="center", fontsize=8, color=TXT)
+    fig.tight_layout()
+    p = os.path.join(OUT, "bo_tri_4_ldr.png")
+    fig.savefig(p, facecolor="white", bbox_inches="tight", pad_inches=0.18)
+    plt.close(fig)
+    print("da ve: bo_tri_4_ldr.png")
 
 
-# ============================================================== luu do
-def _fdiamond(ax, cx, cy, w, h, t, fs=8.0):
-    pts = [(cx, cy + h / 2), (cx + w / 2, cy), (cx, cy - h / 2), (cx - w / 2, cy)]
-    ax.add_patch(Polygon(pts, closed=True, fc="white", ec=INK, lw=1.1))
-    txt(ax, cx, cy, _w(t, 26), fs=fs)
-
-
-def luu_do_tong_quat():
-    f, ax = fig(10.2, 12.6, (0, 102), (0, 132))
-    txt(ax, 51, 129, "LƯU ĐỒ TỔNG QUÁT CHƯƠNG TRÌNH ĐIỀU KHIỂN LAI", fs=12, bold=True)
-    rbox(ax, 42, 122, 30, 6, "BẮT ĐẦU: khởi tạo ADC, I²C, LCD, chân lệnh")
-    rbox(ax, 42, 111, 34, 8, "Đọc giờ DS1307 → tính góc\nthiên văn (δ, H, α, γ)")
-    rbox(ax, 42, 98, 34, 7, "Đọc biến trở → góc hiện tại θ")
-    _fdiamond(ax, 42, 85, 34, 10, "|γ − θ| > 5° ?\n(lệch thô)")
-    rbox(ax, 82, 85, 26, 8, "Chạy motor theo\nlịch thiên văn")
-    rbox(ax, 42, 68, 34, 8, "Đọc 4 LDR → e1, e2;\ntổng sáng S")
-    _fdiamond(ax, 42, 54, 34, 10, "S ≥ ngưỡng nắng\nvà |e| > ngưỡng ?")
-    rbox(ax, 82, 54, 26, 8, "Tinh chỉnh motor\ntheo dấu e")
-    rbox(ax, 12, 54, 22, 8, "Giữ vị trí\n(theo lịch)")
-    rbox(ax, 42, 38, 34, 7, "Đọc công tắc hành trình,\nchặn chiều nguy hiểm")
-    rbox(ax, 42, 26, 34, 7, "Hiển thị LCD: giờ, góc,\ne1, e2, trạng thái")
-    rbox(ax, 42, 14, 34, 6, "Ghi log Serial, chờ chu kỳ, lặp lại")
-    arr(ax, 42, 119, 42, 115); arr(ax, 42, 107, 42, 101.5); arr(ax, 42, 94.5, 42, 90)
-    arr(ax, 59, 85, 69, 85); txt(ax, 64, 87, "đúng", fs=7.8)
-    arr(ax, 42, 80, 42, 72); txt(ax, 45, 76, "sai", fs=7.8)
-    arr(ax, 42, 64, 42, 59)
-    arr(ax, 59, 54, 69, 54); txt(ax, 64, 56, "đúng", fs=7.8)
-    arr(ax, 25, 54, 23, 54); arr(ax, 25, 54, 25, 54.001)
-    line(ax, 25, 54, 23, 54); txt(ax, 33, 57, "sai", fs=7.8)
-    arr(ax, 42, 49, 42, 41.5)
-    line(ax, 82, 81, 82, 76); line(ax, 82, 76, 96, 76); line(ax, 96, 76, 96, 38)
-    line(ax, 82, 50, 82, 46); line(ax, 82, 46, 96, 46)
-    line(ax, 12, 50, 12, 38); line(ax, 12, 38, 25, 38)
-    arr(ax, 42, 34.5, 42, 29.5); arr(ax, 42, 22.5, 42, 17)
-    line(ax, 25, 38, 25, 14); line(ax, 25, 14, 25, 14.001)
-    line(ax, 96, 38, 59, 38)
-    line(ax, 25, 14, 25, 6); line(ax, 25, 6, 42, 6); arr(ax, 42, 6, 42, 11)
-    save(f, "luu_do_tong_quat.png")
+# ------------------------------------------------------------------ luu do
+def luu_do_tong_quat(truc=1):
+    hai = (truc == 2)
+    fig, ax = new_fig(9.6, 13.6, (0, 96), (0, 136))
+    title(ax, 48, 133, "LƯU ĐỒ TỔNG QUÁT CHƯƠNG TRÌNH HYBRID – HỆ %s TRỤC"
+          % ("MỘT" if not hai else "HAI"), 10)
+    box(ax, 40, 126, 22, 5, "BẮT ĐẦU", fs=8.4, round_=True)
+    box(ax, 40, 116, 44, 8, "Khởi tạo: ADC 12 bit; I²C (DS1307, LCD); chân cầu H;\nđọc hệ số hiệu chuẩn; đọc giờ DS1307", fs=7.4, wrap=44)
+    box(ax, 40, 104, 40, 7, "Đọc giờ, ngày từ DS1307 → tính δ, H, α, γ", fs=7.6, wrap=40)
+    dec(ax, 40, 92, 40, 10, "Đến chu kỳ định vị thô\n(30 phút)?", fs=7.6)
+    box(ax, 78, 92, 26, 8, "So góc thiên văn với góc tấm pin:\nlệch > 2° thì chạy motor tới góc đặt", fs=7.2, wrap=26)
+    box(ax, 40, 78, 40, 8, "Đọc 4 kênh ADC → tính S, e1" + (", e2" if hai else ""), fs=7.6, wrap=40)
+    dec(ax, 40, 66, 38, 9, "Nắng đủ mạnh?\n(S > S_min)", fs=7.6)
+    box(ax, 78, 66, 26, 7, "Trời mây mù:\ngiữ nguyên vị trí theo lịch", fs=7.4, wrap=26)
+    dec(ax, 40, 53, 38, 9, "|e1| > ngưỡng?", fs=7.6)
+    box(ax, 78, 53, 26, 7, "Chạy motor trục quay\ntheo dấu e1 (cầu H)", fs=7.4, wrap=26)
+    if hai:
+        dec(ax, 40, 40, 38, 9, "|e2| > ngưỡng?", fs=7.6)
+        box(ax, 78, 40, 26, 7, "Chạy motor trục nghiêng\ntheo dấu e2 (cầu H)", fs=7.4, wrap=26)
+        y_lcd = 27
+    else:
+        y_lcd = 33
+    box(ax, 40, y_lcd, 40, 7, "Đọc biến trở → góc tấm pin; hiển thị giờ,\ngóc, trạng thái lên LCD I2C 1602", fs=7.4, wrap=40)
+    box(ax, 40, y_lcd - 10, 30, 6, "Chờ hết chu kỳ rồi lặp lại", fs=7.8, round_=True)
+    arr(ax, 40, 123.5, 40, 120)
+    arr(ax, 40, 112, 40, 107.5)
+    arr(ax, 40, 100.5, 40, 97)
+    arr(ax, 40, 87, 40, 82, label="không", lx=41, ly=84.5)
+    arr(ax, 60, 92, 65, 92, label="có", lx=60.5, ly=93.5)
+    arr(ax, 40, 74, 40, 70.5)
+    arr(ax, 59, 66, 65, 66, label="không", lx=59.5, ly=67.5)
+    arr(ax, 40, 61.5, 40, 57.5, label="có", lx=41, ly=59.5)
+    arr(ax, 59, 53, 65, 53, label="có", lx=59.5, ly=54.5)
+    arr(ax, 40, 48.5, 40, 44.5 if hai else 36.5, label="không", lx=41, ly=46.5 if hai else 40)
+    if hai:
+        arr(ax, 59, 40, 65, 40, label="có", lx=59.5, ly=41.5)
+        arr(ax, 40, 35.5, 40, 30.5, label="không", lx=41, ly=33)
+    arr(ax, 40, y_lcd - 3.5, 40, y_lcd - 7)
+    line(ax, 78, 88, 78, 84);  line(ax, 78, 84, 95, 84)
+    line(ax, 78, 62.5, 78, 60); line(ax, 78, 60, 95, 60)
+    line(ax, 78, 49.5, 78, 47); line(ax, 78, 47, 95, 47)
+    if hai:
+        line(ax, 78, 36.5, 78, 34.5); line(ax, 78, 34.5, 95, 34.5)
+    line(ax, 95, 84, 95, y_lcd)
+    line(ax, 95, y_lcd, 60, y_lcd)
+    line(ax, 25, y_lcd - 10, 8, y_lcd - 10)
+    line(ax, 8, y_lcd - 10, 8, 104)
+    arr(ax, 8, 104, 20, 104)
+    save(fig, "luu_do_tong_quat_%d_truc.png" % truc)
 
 
 def luu_do_thien_van():
-    f, ax = fig(9.4, 10.4, (0, 94), (0, 110))
-    txt(ax, 47, 107, "LƯU ĐỒ NHÁNH THIÊN VĂN (VÒNG HỞ TỪ RTC)", fs=11.5, bold=True)
-    rbox(ax, 44, 100, 34, 6, "Đọc DS1307: giờ, phút, giây, ngày")
-    rbox(ax, 44, 89, 40, 8, "Đổi sang giờ Mặt Trời t theo kinh độ 106,06°")
-    rbox(ax, 44, 76, 44, 9, "δ = 23,45°·sin[360°·(284+n)/365]\nH = 15°·(t − 12)")
-    rbox(ax, 44, 62, 46, 9, "sin α = sin φ·sin δ + cos φ·cos δ·cos H\nγ = atan2(sin H, cos H·sin φ − tan δ·cos φ)")
-    rbox(ax, 44, 48, 40, 8, "Quy đổi γ về góc lệnh trục quay\ncộng hệ số lắp đặt")
-    _fdiamond(ax, 44, 34, 36, 10, "|góc lệnh − θ hiện tại| > 2° ?")
-    rbox(ax, 44, 18, 36, 7, "Phát xung motor tới góc lệnh\n(kiểm tra hành trình)")
-    rbox(ax, 44, 7, 30, 5, "Giữ vị trí, chờ chu kỳ sau")
-    for y1, y2 in ((97, 93), (85, 80.5), (71.5, 66.5), (57.5, 52), (44, 39), (29, 21.5)):
-        arr(ax, 44, y1, 44, y2)
-    arr(ax, 62, 34, 74, 34); line(ax, 74, 34, 74, 7); line(ax, 74, 7, 59, 7)
-    txt(ax, 66, 36, "sai", fs=7.8); txt(ax, 47, 25, "đúng", fs=7.8)
-    save(f, "luu_do_thien_van.png")
+    fig, ax = new_fig(8.6, 11.4, (0, 86), (0, 114))
+    title(ax, 43, 111, "LƯU ĐỒ ĐỌC GIỜ DS1307 VÀ TÍNH GÓC THIÊN VĂN", 9.5)
+    box(ax, 43, 104, 22, 5, "BẮT ĐẦU", fs=8.4, round_=True)
+    box(ax, 43, 95, 44, 7, "Đọc DS1307 qua I²C: giây, phút, giờ, ngày, tháng, năm", fs=7.6, wrap=44)
+    box(ax, 43, 84, 44, 7, "Tính n = số ngày từ 1/1;  t = giờ Mặt Trời quy đổi", fs=7.6, wrap=44)
+    box(ax, 43, 73, 46, 8, "δ = 23,45° · sin[360°·(284 + n)/365]", fs=8.0, wrap=46)
+    box(ax, 43, 62, 46, 8, "H = 15° · (t − 12)", fs=8.0, wrap=46)
+    box(ax, 43, 50, 50, 9, "sin α = sin φ·sin δ + cos φ·cos δ·cos H\n→ góc cao α", fs=7.8, wrap=50)
+    box(ax, 43, 37, 50, 9, "γ = atan2(sin H, cos H·sin φ − tan δ·cos φ)\n→ góc phương vị", fs=7.8, wrap=50)
+    box(ax, 43, 24, 50, 8, "Đổi (α, γ) ra góc đặt của từng trục, giới hạn hành trình", fs=7.6, wrap=50)
+    box(ax, 43, 13, 26, 5, "Trả về góc đặt", fs=8.2, round_=True)
+    for y1, y2 in ((101.5, 98.5), (91.5, 87.5), (80.5, 77), (69, 66),
+                   (58, 54.5), (45.5, 41.5), (32.5, 28), (20, 15.5)):
+        arr(ax, 43, y1, 43, y2)
+    save(fig, "luu_do_thien_van.png")
 
 
-def luu_do_ldr():
-    f, ax = fig(9.4, 10.4, (0, 94), (0, 110))
-    txt(ax, 47, 107, "LƯU ĐỒ NHÁNH LDR (VÒNG KÍN TINH CHỈNH)", fs=11.5, bold=True)
-    rbox(ax, 44, 100, 40, 6, "Đọc 4 kênh ADC: 32 mẫu, lấy trung bình")
-    rbox(ax, 44, 89, 44, 8, "S = tổng 4 kênh; e1 = (trái − phải)/S;\ne2 = (trên − dưới)/S")
-    _fdiamond(ax, 44, 74, 36, 10, "S ≥ ngưỡng nắng ?")
-    rbox(ax, 80, 74, 24, 7, "Chuyển chế độ\ntheo lịch thiên văn")
-    _fdiamond(ax, 44, 57, 36, 10, "|e1| > ngưỡng chết ?")
-    rbox(ax, 44, 41, 38, 7, "Quay trục 1 theo dấu e1\nmột bước tinh chỉnh")
-    _fdiamond(ax, 44, 26, 36, 9, "|e2| > ngưỡng chết ?")
-    rbox(ax, 44, 12, 38, 6, "Quay trục 2 theo dấu e2 (bản 2 trục)")
-    rbox(ax, 12, 26, 20, 6, "Dừng motor")
-    arr(ax, 44, 97, 44, 93); arr(ax, 44, 85, 44, 79)
-    arr(ax, 62, 74, 68, 74); txt(ax, 65, 76, "sai", fs=7.8)
-    arr(ax, 44, 69, 44, 62); txt(ax, 47, 65.5, "đúng", fs=7.8)
-    arr(ax, 44, 52, 44, 44.5); txt(ax, 47, 48, "đúng", fs=7.8)
-    arr(ax, 44, 37.5, 44, 30.5); txt(ax, 47, 34, "sai", fs=7.8)
-    arr(ax, 44, 21.5, 44, 15); txt(ax, 47, 18, "đúng", fs=7.8)
-    arr(ax, 26, 26, 25, 26); line(ax, 26, 26, 22, 26); txt(ax, 34, 28.5, "sai", fs=7.8)
-    line(ax, 80, 70.5, 80, 66); line(ax, 80, 66, 90, 66); line(ax, 90, 66, 90, 6)
-    line(ax, 44, 9, 44, 6); line(ax, 44, 6, 90, 6)
-    save(f, "luu_do_ldr.png")
+def luu_do_doc_adc():
+    fig, ax = new_fig(8.6, 11.0, (0, 86), (0, 110))
+    title(ax, 43, 107, "LƯU ĐỒ ĐỌC ADC BỐN KÊNH LDR", 9.5)
+    box(ax, 43, 100, 22, 5, "BẮT ĐẦU", fs=8.4, round_=True)
+    box(ax, 43, 91, 46, 7, "Với mỗi kênh: lấy 16 mẫu ADC, bỏ mẫu lỗi, lấy trung bình", fs=7.6, wrap=46)
+    box(ax, 43, 80, 46, 7, "Nhân hệ số hiệu chuẩn K_cal của từng kênh", fs=7.6, wrap=46)
+    box(ax, 43, 69, 48, 8, "S = tổng 4 kênh;  e1 = (trái) − (phải);\ne2 = (trên) − (dưới)", fs=7.8, wrap=48)
+    dec(ax, 43, 56, 38, 9, "S < S_min ?\n(trời mây mù)", fs=7.6)
+    box(ax, 74, 56, 22, 7, "Báo cờ mây mù:\nkhông phát lệnh LDR", fs=7.4, wrap=22)
+    box(ax, 43, 43, 44, 7, "Trả về S, e1, e2 cho khối quyết định", fs=7.8, wrap=44)
+    box(ax, 43, 32, 22, 5, "KẾT THÚC", fs=8.4, round_=True)
+    arr(ax, 43, 97.5, 43, 94.5)
+    arr(ax, 43, 87.5, 43, 83.5)
+    arr(ax, 43, 76.5, 43, 73)
+    arr(ax, 43, 65, 43, 60.5)
+    arr(ax, 62, 56, 63, 56, label="đúng", lx=62.5, ly=57.5)
+    arr(ax, 43, 51.5, 43, 46.5, label="sai", lx=44, ly=49)
+    arr(ax, 43, 39.5, 43, 34.5)
+    save(fig, "luu_do_doc_adc.png")
 
 
-def luu_do_dong_co():
-    f, ax = fig(9.4, 9.6, (0, 94), (0, 102))
-    txt(ax, 47, 99, "LƯU ĐỒ ĐIỀU KHIỂN ĐỘNG CƠ QUA OPTO – CẦU H", fs=11.5, bold=True)
-    rbox(ax, 44, 92, 40, 6, "Nhận lệnh chiều quay và số xung")
-    _fdiamond(ax, 44, 79, 36, 9, "Công tắc hành trình\nchiều đó = 0 ?")
-    rbox(ax, 80, 79, 24, 6, "Bỏ lệnh, báo LCD")
-    rbox(ax, 44, 64, 42, 7, "Hạ mức chân th_thuan hoặc th_nguoc\n(opto dẫn, cầu H mở chiều tương ứng)")
-    rbox(ax, 44, 51, 38, 6, "Đếm xung / đọc biến trở hồi tiếp")
-    _fdiamond(ax, 44, 38, 36, 9, "Tới góc đích hoặc\nhết số xung ?")
-    rbox(ax, 44, 24, 40, 6, "Đưa cả hai chân lệnh lên mức cao\n(cầu H khóa, trục vít tự giữ)")
-    rbox(ax, 44, 12, 30, 5, "Trả trạng thái về vòng chính")
-    arr(ax, 44, 89, 44, 83.5)
-    arr(ax, 62, 79, 68, 79); txt(ax, 65, 81, "đúng", fs=7.8)
-    arr(ax, 44, 74.5, 44, 67.5); txt(ax, 47, 71, "sai", fs=7.8)
-    arr(ax, 44, 60.5, 44, 54); arr(ax, 44, 48, 44, 42.5)
-    arr(ax, 44, 33.5, 44, 27); txt(ax, 47, 30, "đúng", fs=7.8)
-    line(ax, 26, 38, 14, 38); line(ax, 14, 38, 14, 45); arr(ax, 14, 45, 23, 45)
-    txt(ax, 20, 40, "sai: quay tiếp", fs=7.6)
-    arr(ax, 44, 21, 44, 14.5)
-    line(ax, 80, 76, 80, 70); line(ax, 80, 70, 88, 70); line(ax, 88, 70, 88, 12)
-    line(ax, 88, 12, 59, 12)
-    save(f, "luu_do_dong_co.png")
+def luu_do_dieu_khien_motor():
+    fig, ax = new_fig(8.8, 11.6, (0, 88), (0, 116))
+    title(ax, 44, 113, "LƯU ĐỒ ĐIỀU KHIỂN MOTOR QUA CẦU H 4 TIP41C", 9.5)
+    box(ax, 44, 106, 30, 6, "Nhận e của một trục và góc tấm pin", fs=7.8, wrap=30)
+    dec(ax, 44, 95, 36, 9, "|e| > ngưỡng?", fs=7.8)
+    box(ax, 76, 95, 22, 7, "Tắt cả hai nhánh cầu H\n(motor tự giữ)", fs=7.4, wrap=22)
+    dec(ax, 44, 82, 36, 9, "e mang dấu nào?\n(xác định chiều)", fs=7.6)
+    box(ax, 20, 70, 22, 7, "Chiều A:\nIN1 = 1, IN2 = 0", fs=7.6, wrap=22)
+    box(ax, 68, 70, 22, 7, "Chiều B:\nIN1 = 0, IN2 = 1", fs=7.6, wrap=22)
+    dec(ax, 44, 58, 38, 9, "Công tắc hành trình\nchiều đó chạm?", fs=7.6)
+    box(ax, 78, 58, 20, 7, "Dừng ngay,\nbáo lỗi trên LCD", fs=7.4, wrap=20)
+    box(ax, 44, 45, 40, 8, "Giữ lệnh chạy; mỗi 10 ms đọc lại e\nvà biến trở hồi tiếp", fs=7.6, wrap=40)
+    dec(ax, 44, 32, 38, 9, "|e| ≤ vùng chết\nhoặc tới góc đích?", fs=7.6)
+    box(ax, 44, 19, 34, 7, "Tắt cả IN1, IN2 – trục vít tự hãm giữ vị trí", fs=7.6, wrap=34)
+    box(ax, 44, 9, 22, 5, "KẾT THÚC", fs=8.4, round_=True)
+    arr(ax, 44, 103, 44, 99.5)
+    arr(ax, 44, 90.5, 44, 86.5, label="có", lx=45, ly=88.5)
+    arr(ax, 62, 95, 65, 95, label="không", lx=62.5, ly=96.5)
+    arr(ax, 36, 78, 26, 73.5, label="dương", lx=26, ly=76)
+    arr(ax, 52, 78, 62, 73.5, label="âm", lx=58, ly=76)
+    line(ax, 20, 66.5, 20, 63)
+    line(ax, 68, 66.5, 68, 63)
+    line(ax, 20, 63, 68, 63)
+    arr(ax, 44, 63, 44, 62.5)
+    arr(ax, 44, 53.5, 44, 49)
+    arr(ax, 63, 58, 68, 58, label="có", lx=63.5, ly=59.5)
+    arr(ax, 44, 41, 44, 36.5, label="chưa", lx=45, ly=38.5)
+    arr(ax, 44, 27.5, 44, 22.5, label="rồi", lx=45, ly=25)
+    arr(ax, 44, 15.5, 44, 11.5)
+    save(fig, "luu_do_dieu_khien_motor.png")
 
 
-def luu_do_hien_thi():
-    f, ax = fig(9.4, 8.6, (0, 94), (0, 92))
-    txt(ax, 47, 89, "LƯU ĐỒ ĐỌC GIỜ DS1307 VÀ HIỂN THỊ LCD I²C", fs=11.5, bold=True)
-    rbox(ax, 44, 82, 40, 6, "Mỗi 1 s: Wire.requestFrom(0x68, 7)")
-    rbox(ax, 44, 71, 44, 7, "Giải mã BCD: giây, phút, giờ,\nthứ, ngày, tháng, năm")
-    rbox(ax, 44, 58, 44, 7, "Tính giờ Mặt Trời và góc thiên văn\ntương ứng")
-    rbox(ax, 44, 45, 44, 7, "Lấy góc thực tế từ biến trở,\ne1, e2 từ ma trận LDR")
-    rbox(ax, 44, 31, 46, 8, "LCD dòng 1: gg:mm:ss  góc lệnh\nLCD dòng 2: góc thực, e1, e2, chế độ")
-    rbox(ax, 44, 17, 40, 6, "Nếu mất I²C: báo lỗi “RTC/LCD” và\ngiữ chế độ lịch cuối")
-    for y1, y2 in ((79, 74.5), (67.5, 61.5), (54.5, 48.5), (41.5, 35), (27, 20)):
-        arr(ax, 44, y1, 44, y2)
-    line(ax, 44, 14, 44, 9); line(ax, 80, 9, 80, 82); arr(ax, 80, 82, 64, 82)
-    save(f, "luu_do_hien_thi.png")
+def luu_do_lcd():
+    fig, ax = new_fig(8.4, 9.6, (0, 84), (0, 96))
+    title(ax, 42, 93, "LƯU ĐỒ HIỂN THỊ LCD I2C 1602", 9.5)
+    box(ax, 42, 86, 22, 5, "BẮT ĐẦU", fs=8.4, round_=True)
+    box(ax, 42, 77, 44, 7, "Đọc giờ, ngày từ DS1307 (I²C, địa chỉ 0x68)", fs=7.6, wrap=44)
+    box(ax, 42, 66, 44, 7, "Đọc góc tấm pin từ biến trở và trạng thái motor", fs=7.6, wrap=44)
+    box(ax, 42, 55, 46, 8, "Dòng 1: “DD/MM  HH:MM:SS”\nDòng 2: goc=+xx,x  e1=+xxx", fs=7.6, wrap=46)
+    box(ax, 42, 43, 40, 7, "lcd.setCursor + lcd.print qua thư viện LiquidCrystal_I2C", fs=7.4, wrap=40)
+    box(ax, 42, 32, 30, 6, "Chờ 1 giây rồi cập nhật lại", fs=7.8, round_=True)
+    arr(ax, 42, 83.5, 42, 80.5)
+    arr(ax, 42, 73.5, 42, 69.5)
+    arr(ax, 42, 62.5, 42, 59)
+    arr(ax, 42, 51, 42, 46.5)
+    arr(ax, 42, 39.5, 42, 35)
+    line(ax, 42, 29, 42, 26)
+    line(ax, 42, 26, 12, 26)
+    line(ax, 12, 26, 12, 77)
+    arr(ax, 12, 77, 20, 77)
+    save(fig, "luu_do_lcd.png")
 
 
-# ============================================================== 7 so do mach ve lai
-def mach_cau_h():
-    f, ax = fig(10.8, 7.4, (0, 108), (0, 74))
-    txt(ax, 54, 71, "MẠCH ĐỘNG LỰC: CẦU H 4 TIP41C + DIODE BẢO VỆ", fs=11.5, bold=True)
-    line(ax, 16, 64, 92, 64, lw=1.2); vcc(ax, 54, 64, "VCC 12 V")
-    line(ax, 16, 8, 92, 8, lw=1.2); gnd(ax, 54, 8)
-    # hai nua cau
-    for (x, top, bot, btop, bbot) in ((32, "U1", "U2", "dkxuoi", "dknguoc"),
-                                      (76, "U3", "U4", "dknguoc", "dkxuoi")):
-        line(ax, x, 64, x, 58)
-        rbox(ax, x, 52, 11, 12, top + "\nTIP41C", fs=7.6, wrap=10)
-        txt(ax, x, 56.6, "C", fs=6.6); txt(ax, x, 47.4, "E", fs=6.6)
-        line(ax, x, 46, x, 38)
-        dot(ax, x, 38)
-        line(ax, x, 38, x, 30)
-        rbox(ax, x, 24, 11, 12, bot + "\nTIP41C", fs=7.6, wrap=10)
-        txt(ax, x, 28.6, "C", fs=6.6); txt(ax, x, 19.4, "E", fs=6.6)
-        line(ax, x, 18, x, 8)
-        # base + tro 10k + net flag
-        sgn = -1 if x == 32 else 1
-        for (cy, net) in ((52, btop), (24, bbot)):
-            line(ax, x - sgn * 5.5, cy, x - sgn * 12, cy)
-            ax.add_patch(Rectangle((min(x - sgn * 16, x - sgn * 12), cy - 1.2), 4, 2.4,
-                                   fc="white", ec=INK, lw=1.0))
-            txt(ax, x - sgn * 14, cy + 2.4, "10k", fs=7.0)
-            if sgn < 0:
-                netflag(ax, x - 18, cy, net, ha="right")
-            else:
-                netflag(ax, x + 18, cy, net)
-        # diode bao ve doc theo nua cau
-        xd = x + (8 if x == 32 else -8)
-        for (y1, y2, up) in ((64, 38, True), (38, 8, False)):
-            line(ax, xd, y1, xd, y1 - (3 if up else 0))
-            ym = (y1 + y2) / 2 + (6 if up else -6)
-            if up:
-                ax.add_patch(Polygon([(xd - 1.7, ym - 3), (xd + 1.7, ym - 3), (xd, ym + 3)],
-                                     closed=True, fc="white", ec=INK, lw=1.0))
-                line(ax, xd - 1.7, ym + 3, xd + 1.7, ym + 3)
-            else:
-                ax.add_patch(Polygon([(xd - 1.7, ym + 3), (xd + 1.7, ym + 3), (xd, ym - 3)],
-                                     closed=True, fc="white", ec=INK, lw=1.0))
-                line(ax, xd - 1.7, ym - 3, xd + 1.7, ym - 3)
-            line(ax, xd, y2 + (3 if not up else 0), xd, y2)
-            line(ax, xd, y1, x, y1) if y1 == 64 else line(ax, xd, y1, x, y1)
-            dot(ax, xd, 38)
-        txt(ax, xd + 3, 55, "D2" if x == 32 else "D5", fs=7.2, ha="left")
-        txt(ax, xd + 3, 20, "D3" if x == 32 else "D4", fs=7.2, ha="left")
-    # dong co giua hai nut
-    rbox(ax, 54, 38, 14, 9, "ĐỘNG CƠ", fs=8.0, wrap=12)
-    line(ax, 32, 38, 47, 38); line(ax, 61, 38, 76, 38)
-    txt(ax, 54, 30, "đầu A                          đầu B", fs=7.2)
-    txt(ax, 54, 3, "dkxuoi = 0: U1–U4 dẫn cặp chéo trái; dknguoc = 0: cặp chéo phải; cả hai = 1: cầu H khoá", fs=8.0)
-    save(f, "mach_dong_luc_cau_h_tip41c.png", sub="mach")
-
-
-def mach_opto():
-    f, ax = fig(10.2, 6.4, (0, 102), (0, 64))
-    txt(ax, 51, 61, "MẠCH CÁCH LY OPTO PC817C ĐIỀU KHIỂN CẦU H", fs=11.5, bold=True)
-    for (cy, th, dk, ph) in ((44, "th_thuan", "dkxuoi", "PH2"), (18, "th_nguoc", "dknguoc", "PH1")):
-        rbox(ax, 51, cy, 14, 12, ph + "\nPC817C", fs=7.6, wrap=12)
-        vcc(ax, 40, cy + 6, "3,3 V")
-        line(ax, 40, cy + 6, 44, cy + 6)
-        netflag(ax, 20, cy - 6, th, ha="right")
-        line(ax, 26, cy - 6, 32, cy - 6)
-        ax.add_patch(Rectangle((32, cy - 7.2), 6, 2.4, fc="white", ec=INK, lw=1.0))
-        txt(ax, 35, cy - 4.2, "220", fs=7.2)
-        line(ax, 38, cy - 6, 44, cy - 6)
-        line(ax, 58, cy + 6, 66, cy + 6); vcc(ax, 66, cy + 6, "12 V")
-        line(ax, 58, cy - 6, 74, cy - 6)
-        netflag(ax, 74, cy - 6, dk)
-    txt(ax, 51, 5, "Chân lệnh ESP32 mức thấp sẽ sáng LED opto, transistor quang dẫn xuống mass 12 V", fs=8.2)
-    save(f, "mach_opto_pc817.png", sub="mach")
-
-
-def mach_hanh_trinh():
-    f, ax = fig(10.2, 6.8, (0, 102), (0, 68))
-    txt(ax, 51, 65, "BỐN CÔNG TẮC HÀNH TRÌNH QT1…QT4 (KÉO XUỐNG 1k)", fs=11.5, bold=True)
-    for i, (cx, name, net) in enumerate(((18, "QT1", "qt1"), (40, "QT2", "qt2"),
-                                         (62, "QT3", "qt3"), (84, "QT4", "qt4"))):
-        vcc(ax, cx, 52, "3,3 V")
-        line(ax, cx, 52, cx, 46)
-        rbox(ax, cx, 41, 8, 9, name, fs=7.6, wrap=8)
-        line(ax, cx, 36.5, cx, 30)
-        dot(ax, cx, 30)
-        netflag(ax, cx + 3, 30, net)
-        line(ax, cx, 30, cx, 26)
-        ax.add_patch(Rectangle((cx - 1.6, 18), 3.2, 8, fc="white", ec=INK, lw=1.0))
-        txt(ax, cx + 3, 22, "1k", fs=7.2, ha="left")
-        gnd(ax, cx, 18)
-    txt(ax, 51, 6, "Công tắc hở: qt = 0; chạm hành trình: qt = 3,3 V → mức 1", fs=8.2)
-    save(f, "mach_cong_tac_hanh_trinh.png", sub="mach")
-
-
-def mach_esp32():
-    f, ax = fig(9.6, 7.6, (0, 96), (0, 76))
-    txt(ax, 48, 73, "KHỐI ESP32 DEVKIT VÀ CÁC MẠNG TÍN HIỆU", fs=11.5, bold=True)
-    ax.add_patch(Rectangle((34, 14), 28, 52, fc="white", ec=INK, lw=1.4))
-    txt(ax, 48, 62, "ESP32 DevKit", fs=10, bold=True)
-    pins = [("D25", "LDR TT"), ("D26", "LDR PT"), ("D27", "LDR TD"), ("D14", "LDR PD"),
-            ("D36", "biến trở"), ("D39", "áp tấm pin"), ("D34", "qt1"), ("D35", "qt2"),
-            ("D32", "qt3"), ("D33", "qt4")]
-    y = 56
-    for p, n in pins:
-        txt(ax, 36, y, p, fs=7.4, ha="left")
-        line(ax, 34, y, 26, y)
-        txt(ax, 25, y, n, fs=7.6, ha="right")
-        y -= 4.4
-    rp = [("D21", "sda"), ("D22", "scl"), ("D19", "th_thuan"), ("D18", "th_nguoc"),
-          ("D5", "th_thuan 2"), ("D13", "th_nguoc 2"), ("3V3", "3,3 V"), ("GND", "mass")]
-    y = 56
-    for p, n in rp:
-        txt(ax, 60, y, p, fs=7.4, ha="right")
-        line(ax, 62, y, 70, y)
-        txt(ax, 71, y, n, fs=7.6, ha="left")
-        y -= 4.4
-    txt(ax, 48, 8, "Bản một trục bỏ hai mạng th_thuan 2 / th_nguoc 2", fs=8.2)
-    save(f, "mach_esp32_devkit.png", sub="mach")
-
-
-def mach_nguon():
-    f, ax = fig(10.2, 5.6, (0, 102), (0, 56))
-    txt(ax, 51, 53, "MẠCH NGUỒN: CHỐNG NGƯỢC CỰC + HẠ ÁP LM2596", fs=11.5, bold=True)
-    rbox(ax, 12, 34, 10, 10, "X1\nnguồn\n12 V", fs=7.4, wrap=9)
-    line(ax, 17, 37, 26, 37)
-    ax.add_patch(Polygon([(26, 34.6), (26, 39.4), (31, 37)], closed=True, fc="white", ec=INK, lw=1.0))
-    line(ax, 31, 34.6, 31, 39.4)
-    txt(ax, 28, 41.5, "1N4007", fs=7.4)
-    line(ax, 31, 37, 44, 37); dot(ax, 44, 37); vcc(ax, 44, 37, "VCC 12 V")
-    rbox(ax, 58, 34, 22, 12, "BC\nLM2596", fs=8.0, wrap=12)
-    line(ax, 44, 37, 47, 37)
-    txt(ax, 48.5, 40, "IN+", fs=7.0, ha="left")
-    line(ax, 47, 30, 47, 26); gnd(ax, 47, 26)
-    txt(ax, 48.5, 28, "IN-", fs=7.0, ha="left")
-    line(ax, 69, 37, 80, 37); vcc(ax, 80, 37, "3,3 V")
-    txt(ax, 67.5, 40, "OUT+", fs=7.0, ha="right")
-    line(ax, 69, 30, 76, 30); gnd(ax, 76, 30)
-    txt(ax, 67.5, 28, "OUT-", fs=7.0, ha="right")
-    line(ax, 12, 29, 12, 22); gnd(ax, 12, 22)
-    txt(ax, 51, 6, "LM2596 cấp 3,3 V cho ESP32; nhánh 7805 riêng cấp 5 V cho LCD và DS1307", fs=8.2)
-    save(f, "mach_nguon_lm2596.png", sub="mach")
-
-
-def mach_7805_lcd():
-    f, ax = fig(10.2, 6.2, (0, 102), (0, 62))
-    txt(ax, 51, 59, "NHÁNH 5 V: ỔN ÁP 7805 VÀ MÀN HÌNH LCD I²C 1602", fs=11.5, bold=True)
-    vcc(ax, 20, 46, "VCC 12 V")
-    line(ax, 20, 46, 20, 40)
-    rbox(ax, 34, 40, 20, 9, "U6  7805", fs=8.2, wrap=14)
-    line(ax, 20, 40, 24, 40); txt(ax, 25.5, 42, "IN", fs=7.2, ha="left")
-    line(ax, 44, 40, 56, 40); vcc(ax, 56, 40, "+5 V")
-    txt(ax, 42.5, 42, "OUT", fs=7.2, ha="right")
-    line(ax, 34, 35.5, 34, 30); gnd(ax, 34, 30)
-    line(ax, 20, 40, 20, 34); line(ax, 18.4, 34, 21.6, 34); line(ax, 18.8, 32.6, 21.2, 32.6)
-    txt(ax, 24, 33, "C1 220µ", fs=7.2, ha="left")
-    line(ax, 56, 40, 56, 34); line(ax, 54.4, 34, 57.6, 34); line(ax, 54.8, 32.6, 57.2, 32.6)
-    txt(ax, 60, 33, "C2 220µ", fs=7.2, ha="left")
-    line(ax, 20, 32, 56, 32); dot(ax, 34, 32)
-    rbox(ax, 62, 16, 44, 16, "U5 – LCD 1602 I²C\n(PCF8574, địa chỉ 0x27)", fs=8.2, wrap=30)
-    for i, (n, nn) in enumerate((("GND", None), ("Vcc", "+5 V"), ("SDA", "sda"), ("SCL", "scl"))):
-        y = 21 - i * 3
-        line(ax, 40, y, 30, y)
-        txt(ax, 39, y, n, fs=7.2, ha="right")
-        if nn:
-            txt(ax, 29, y, nn, fs=7.4, ha="right", c=NET)
-    gnd(ax, 24, 21)
-    txt(ax, 51, 4, "LCD và DS1307 chung bus I²C (sda/scl) với điện trở kéo lên trên module", fs=8.2)
-    save(f, "mach_7805_lcd_i2c.png", sub="mach")
-
-
-def mach_ds1307():
-    f, ax = fig(9.6, 5.6, (0, 96), (0, 56))
-    txt(ax, 48, 53, "MODULE THỜI GIAN THỰC DS1307 (I²C 0x68)", fs=11.5, bold=True)
-    ax.add_patch(Rectangle((20, 14), 40, 28, fc="white", ec=INK, lw=1.3))
-    txt(ax, 40, 34, "U7  DS1307", fs=9.5, bold=True)
-    ax.add_patch(Circle((30, 24), 6, fc="white", ec=INK, lw=1.1))
-    txt(ax, 30, 24, "pin nuôi", fs=6.8)
-    pins = [("SQW", None), ("SCL", "scl"), ("SDA", "sda"), ("VCC", "+5 V"), ("GND", None)]
-    y = 38
-    for n, nn in pins:
-        line(ax, 60, y, 70, y)
-        txt(ax, 58.5, y, n, fs=7.6, ha="right")
-        if nn:
-            netflag(ax, 70, y, nn)
-        elif n == "VCC":
-            vcc(ax, 74, y, "+5 V")
-        elif n == "GND":
-            gnd(ax, 74, y)
-        y -= 5.5
-    txt(ax, 48, 6, "Pin SQW để trống; giao tiếp Wire.beginTransmission(0x68)", fs=8.2)
-    save(f, "mach_ds1307.png", sub="mach")
+def luu_do_bien_tro():
+    fig, ax = new_fig(8.4, 9.8, (0, 84), (0, 98))
+    title(ax, 42, 95, "LƯU ĐỒ ĐỌC BIẾN TRỞ SUY RA GÓC TẤM PIN", 9.5)
+    box(ax, 42, 88, 22, 5, "BẮT ĐẦU", fs=8.4, round_=True)
+    box(ax, 42, 79, 44, 7, "Đọc 16 mẫu ADC kênh biến trở, lấy trung bình", fs=7.6, wrap=44)
+    box(ax, 42, 68, 46, 8, "Đổi sang điện áp: V = ADC · 3,3 / 4095", fs=7.8, wrap=46)
+    box(ax, 42, 56, 50, 9, "Nội suy 3 điểm hiệu chuẩn:\nθ = θ_min + (V − V_min)·(θ_max − θ_min)/(V_max − V_min)", fs=7.4, wrap=50)
+    box(ax, 42, 43, 44, 7, "Giới hạn θ trong hành trình cơ khí", fs=7.6, wrap=44)
+    box(ax, 42, 32, 40, 7, "Trả về θ cho khối điều khiển và hiển thị LCD", fs=7.6, wrap=40)
+    box(ax, 42, 21, 22, 5, "KẾT THÚC", fs=8.4, round_=True)
+    arr(ax, 42, 85.5, 42, 82.5)
+    arr(ax, 42, 75.5, 42, 72)
+    arr(ax, 42, 64, 42, 60.5)
+    arr(ax, 42, 51.5, 42, 46.5)
+    arr(ax, 42, 39.5, 42, 35.5)
+    arr(ax, 42, 28.5, 42, 23.5)
+    save(fig, "luu_do_bien_tro.png")
 
 
 if __name__ == "__main__":
@@ -517,16 +389,12 @@ if __name__ == "__main__":
     so_do_khoi(2)
     so_do_ket_noi(1)
     so_do_ket_noi(2)
+    so_do_3_phuong_phap()
     bo_tri_ldr()
-    luu_do_tong_quat()
+    luu_do_tong_quat(1)
+    luu_do_tong_quat(2)
     luu_do_thien_van()
-    luu_do_ldr()
-    luu_do_dong_co()
-    luu_do_hien_thi()
-    mach_cau_h()
-    mach_opto()
-    mach_hanh_trinh()
-    mach_esp32()
-    mach_nguon()
-    mach_7805_lcd()
-    mach_ds1307()
+    luu_do_doc_adc()
+    luu_do_dieu_khien_motor()
+    luu_do_lcd()
+    luu_do_bien_tro()

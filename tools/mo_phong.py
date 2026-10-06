@@ -1,305 +1,339 @@
 # -*- coding: utf-8 -*-
-"""Mo phong so he bam nang mat troi 1 truc tai My Hao, Hung Yen.
+"""Mo phong phuong phap HYBRID (thien van dinh vi tho + LDR tinh chinh).
 
-So sanh ba phuong phap dieu khien:
-  - "thien_van" : vong ho, quay tam pin theo goc thien van tinh tu RTC (DS1307);
-  - "ldr"       : vong kin, ma tran 4 LDR suy ra goc lech (phuong phap cu);
-  - "lai"       : HYBRID - thien van dinh vi tho, LDR tinh chinh khi nang dep,
-                  troi may thi giu lich thien van (khong dao dong vo ich).
-Ket qua viet ra hinh_ve/ket_qua_mo_phong_1_truc.png va ket_qua_mo_phong.json.
-Chay:  python3 tools/mo_phong.py
+- Tinh vi tri Mat Troi theo dung cong thuc:
+    delta = 23.45*sin(360*(284+n)/365);  H = 15*(t-12)
+    sin(alpha) = sin(phi)sin(delta) + cos(phi)cos(delta)cos(H)
+- Ma tran tinh toan goc: alpha, gamma theo gio cho 4 ngay dai dien.
+- Mo phong 1 ngay lam viec cua 3 luat: vong ho thien van, vong kin LDR, hybrid.
+- Bang ADC minh hoa: e1 = ADC(trai) - ADC(phai) theo vi tri Mat Troi.
+- So sanh nang luong thu duoc: co dinh / 1 truc / 2 truc (ve bieu do cot).
+
+Chay: python3 tools/mo_phong.py  -> hinh_ve/*.png + hinh_ve/ket_qua_mo_phong.json
 """
 import json
 import math
 import os
 
-OUT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "hinh_ve")
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 
-PHI = math.radians(20.93)      # vi do My Hao, Hung Yen
-LAM = 106.06                   # kinh do Dong
-BETA_S = math.radians(30.0)    # goc ga cam bien LDR
-DELTA_DEAD = math.radians(3.0) # vung chet cua nhanh LDR tinh chinh
-BETA_F = math.radians(21.0)    # goc nghieng tam doi chung co dinh
+PHI = 20.93          # vi do My Hao, Hung Yen
+DAYS = [("21/3", 80), ("21/6", 172), ("23/9", 266), ("21/12", 355)]
+BETA_S = math.radians(30.0)     # goc ga cam bien (vach cheo)
+ADC_MAX = 3000.0                # muc ADC khi chieu thang goc (0..4095)
+ADC_DIFF = 150.0                # san ADC do anh sang khuech tan
+NGUONG_E1 = 200                 # nguong |e1| phat lenh (muc ADC, ~4 do lech)
+DEADBAND = 35                   # vung chet dung motor (muc ADC)
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT = os.path.join(BASE, "hinh_ve")
 
-DAYS = [(80, "21/3"), (172, "21/6"), (266, "23/9"), (355, "21/12")]
+
+def rad(x):
+    return math.radians(x)
 
 
-def decl(n):
-    return math.radians(23.45 * math.sin(math.radians(360.0 * (284 + n) / 365.0)))
+def declination(n):
+    return 23.45 * math.sin(rad(360.0 * (284 + n) / 365.0))
+
+
+def sun_angles(n, t):
+    """Tra ve (alpha, gamma) do: goc cao va goc phuong vi (tinh tu Nam, tay duong)."""
+    d = rad(declination(n))
+    H = rad(15.0 * (t - 12.0))
+    p = rad(PHI)
+    sin_a = math.sin(p) * math.sin(d) + math.cos(p) * math.cos(d) * math.cos(H)
+    sin_a = max(-1.0, min(1.0, sin_a))
+    a = math.asin(sin_a)
+    g = math.atan2(math.sin(H), math.cos(H) * math.sin(p) - math.tan(d) * math.cos(p))
+    return math.degrees(a), math.degrees(g)
 
 
 def sun_vec(n, t):
-    """Vectơ đơn vị hướng Mặt Trời (x = Đông, y = Bắc, z = thiên đỉnh)."""
-    d = decl(n)
-    h = math.radians(15.0 * (t - 12.0))
-    sa = math.sin(PHI) * math.sin(d) + math.cos(PHI) * math.cos(d) * math.cos(h)
-    al = math.asin(max(-1.0, min(1.0, sa)))
-    ca = math.cos(al)
-    az = math.atan2(math.sin(h), math.cos(h) * math.sin(PHI) - math.tan(d) * math.cos(PHI))
-    return (ca * math.sin(az), ca * math.cos(az), sa)
+    a, g = sun_angles(n, t)
+    a, g = rad(a), rad(g)
+    x = math.cos(a) * math.sin(g)     # huong Tay (+)
+    y = math.cos(a) * math.cos(g)     # huong Bac (+)
+    z = math.sin(a)                   # cao (+)
+    return x, y, z
 
 
-def elev_deg(s):
-    return math.degrees(math.asin(max(-1.0, min(1.0, s[2]))))
+def cos_incidence_fixed(n, t, tilt=21.0):
+    """cos goc toi tren tam co dinh, nghiang `tilt` do ve phia Nam."""
+    x, y, z = sun_vec(n, t)
+    tl = rad(tilt)
+    nx, ny, nz = 0.0, -math.sin(tl), math.cos(tl)   # phap tuyen nghieng ve Nam
+    return max(0.0, x * nx + y * ny + z * nz)
 
 
-def azimuth_deg(s):
-    return math.degrees(math.atan2(s[0], s[1]))
+def cos_incidence_1axis(n, t, theta):
+    """1 truc quay quanh truc Bac-Nam; theta = goc quay ve phia Tay (+)."""
+    x, y, z = sun_vec(n, t)
+    th = rad(theta)
+    nx, nz = math.sin(th), math.cos(th)
+    return max(0.0, x * nx + z * nz)
 
 
-# ---------------------------------------------------------------- mặt phẳng quay
-def panel_axes(rho):
-    """Trục quay nằm ngang hướng Bắc-Nam; rho = góc quay (0 = nằm ngang)."""
-    n = (math.sin(rho), 0.0, math.cos(rho))           # pháp tuyến tấm pin
-    r = (math.cos(rho), 0.0, -math.sin(rho))          # hướng "phải" (Đông khi rho=0)
-    return n, r
+def theta_sun_1axis(n, t):
+    """Goc quay ly tuong cua tam 1 truc (khop hinh chieu Dong-Tay cua vec to MT)."""
+    x, y, z = sun_vec(n, t)
+    return math.degrees(math.atan2(x, z))
 
 
-def rho_star(s):
-    """Góc quay lý tưởng: chiếu hướng Mặt Trời lên mặt phẳng quay."""
-    return math.atan2(s[0], s[2])
+def day_energy(n, mode, dt=1.0):
+    t0, t1 = 4.0, 20.0
+    e = 0.0
+    t = t0
+    while t <= t1:
+        a, _g = sun_angles(n, t)
+        if a > 0.0:                      # chi tinh khi Mat Troi tren chan troi
+            if mode == "fixed":
+                e += cos_incidence_fixed(n, t) * dt
+            elif mode == "1axis":
+                e += cos_incidence_1axis(n, t, theta_sun_1axis(n, t)) * dt
+            else:                        # 2 truc: phap tuyen luon trung tia nang
+                e += 1.0 * dt
+        t += dt
+    return e
 
 
-def ldr_pair(delt, k1=1.0, k2=1.0, diff=0.0):
-    """Đáp ứng cặp LDR lệch +/- BETA_S trong mặt phẳng quay."""
-    l1 = k1 * math.cos(delt - BETA_S) + diff
-    l2 = k2 * math.cos(delt + BETA_S) + diff
-    return l1, l2
+# ---------------------------------------------------------------- LDR / ADC
+def ldr_adc(delta_deg, side):
+    """ADC cua cam bien ben 'trai'/'phai' khi huong MT lech delta (do, + = ve phai)."""
+    d = rad(delta_deg)
+    b = BETA_S
+    ang = (d - b) if side == "phai" else (d + b)
+    direct = max(0.0, math.cos(ang))
+    diffuse = 0.12
+    return ADC_MAX * direct + ADC_DIFF * (0.55 + 0.45 * max(0.0, math.cos(d))) + diffuse * 0
 
 
-def delta_hat(l1, l2):
-    e = (l1 - l2) / (l1 + l2)
-    return math.atan(e / math.tan(BETA_S))
+def bang_adc_minh_hoa():
+    rows = []
+    for delta in (-20, -10, -5, 0, 5, 10, 20):
+        l = round(ldr_adc(delta, "trai"))
+        r = round(ldr_adc(delta, "phai"))
+        e1 = l - r
+        if abs(e1) <= NGUONG_E1:
+            act = "Dừng (trong vùng chết)"
+        elif e1 > 0:
+            act = "Quay sang TRÁI (về phía Đông)"
+        else:
+            act = "Quay sang PHẢI (về phía Tây)"
+        rows.append([delta, l, r, e1, act])
+    return rows
 
 
-def cloud(t, seed=0):
-    """Hệ số nắng 0..1 (1 = quang đãng), biến đổi chậm trong ngày."""
-    v = (0.55 + 0.45 * math.sin(2 * math.pi * (t - 7.3) / 6.1 + seed)
-         + 0.22 * math.sin(2 * math.pi * (t - 4.1) / 2.7 + 2.0 * seed))
-    cl = 0.5 + 0.5 * v / 1.22
-    if seed == 2:
-        cl -= 0.55          # ngày nhiều mây: phần lớn thời gian dưới ngưỡng nắng
-    elif seed == 3:
-        cl -= 0.25          # ngày mây trung bình
-    return max(0.05, min(1.0, cl))
-
-
-# ---------------------------------------------------------------- vòng kín một ngày
-OFF = math.radians(4.0)      # sai số lắp đặt/đồng hồ của vòng hở thiên văn
-STEP = math.radians(2.0)     # bước quay cố định của luật LDR thuần
-
-
-def ldr_read(d, cl, t, mismatch, noise):
-    """Giá trị cặp LDR: nắng đẹp theo cos(Δ∓β_s); mây dày chỉ còn sáng khuếch tán."""
-    if cl < 0.45:
-        # mây dày: chỉ còn sáng khuếch tán gần đều, chênh lệch rất nhỏ
-        l1 = 0.35 + 0.02 * math.sin(5.1 * t + 1.0) + noise * math.sin(97.0 * t)
-        l2 = 0.35 + 0.02 * math.cos(4.3 * t) + noise * math.cos(89.0 * t)
-        return l1, l2
-    l1, l2 = ldr_pair(d, 1.0 + mismatch, 1.0 - mismatch,
-                      0.10 * math.cos(d) * (1.0 - cl))
-    l1 *= 1.0 + noise * math.sin(97.0 * t)
-    l2 *= 1.0 + noise * math.cos(89.0 * t)
-    return l1, l2
-
-
-def run_day(n, method="lai", mismatch=0.03, noise=0.01, seed=1, dt_min=2.0):
-    """Mô phỏng cả ngày; trả (sai số trung bình deg, số lần chạy motor, năng lượng)."""
-    errs, moves, energy = [], 0, 0.0
-    rho = rho_star(sun_vec(n, 6.0)) + OFF              # xuất phát theo lịch sáng sớm
+# ---------------------------------------------------------------- mo phong ngay
+def simulate_day(n, mode, cloudy=(10.0, 11.0), seed=7):
+    """mode: 'openloop' | 'closedloop' | 'hybrid'. Tra ve (sai so TB, max, so lan motor, day goc)."""
+    import random
+    random.seed(seed)
+    t0 = 5.5
+    t1 = 18.5
+    # gio mat moc: alpha > 0
     t = 5.0
-    while t <= 19.0:
-        s = sun_vec(n, t)
-        rs = rho_star(s)
-        cl = cloud(t, seed)
-        nrm, rgt = panel_axes(rho)
-        cos_i = max(0.0, nrm[0] * s[0] + nrm[1] * s[1] + nrm[2] * s[2])
-        energy += cl * cos_i * dt_min
-        if elev_deg(s) > 5.0:
-            errs.append(math.degrees(rs - rho))
-            target = rho
-            if method == "thien_van":
-                # vòng hở: lịch thiên văn từ RTC, nhảy bước 2 độ
-                if abs(rs + OFF - rho) > math.radians(2.0):
-                    target = rs + OFF
-                    moves += 1
-            elif method == "ldr":
-                d = rs - rho
-                l1, l2 = ldr_read(d, cl, t, mismatch, noise)
-                dh = delta_hat(l1, l2)
-                if abs(dh) > DELTA_DEAD:
-                    target = rho + math.copysign(STEP, dh)   # dò bước cố định
-                    moves += 1
-            else:                                            # lai (hybrid)
-                d = rs - rho
-                l1, l2 = ldr_read(d, cl, t, 0.0, noise)      # kênh đã hiệu chuẩn
-                dh = delta_hat(l1, l2)
-                if cl >= 0.45 and abs(dh) > math.radians(1.5):
-                    target = rho + dh                        # nắng: LDR tinh chỉnh
-                    moves += 1
-                elif abs(rs + OFF - rho) > math.radians(5.0):
-                    target = rs + OFF                        # mây/lệch thô: bám lịch
-                    moves += 1
-            if abs(target - rho) > 1e-9:
-                rho = target
-        t += dt_min / 60.0
-    mean_err = sum(abs(e) for e in errs) / max(1, len(errs))
-    return mean_err, moves, energy
+    while sun_angles(n, t)[0] <= 2.0 and t < 12:
+        t += 0.1
+    t0 = t
+    t = 19.0
+    while sun_angles(n, t)[0] <= 2.0 and t > 12:
+        t -= 0.1
+    t1 = t
+
+    p = 0.0                 # goc tam pin hien tai (do)
+    runs = 0
+    errs = []
+    track = []
+    t = t0
+    dt = 1.0 / 60.0         # 1 phut
+    last_sched = -99.0
+    last_ldr = -99.0
+    while t <= t1 + 1e-9:
+        ts = theta_sun_1axis(n, t)
+        in_cloud = cloudy[0] <= t <= cloudy[1] if cloudy else False
+        direct = 0.12 if in_cloud else 1.0
+
+        if mode in ("openloop", "hybrid"):
+            if t - last_sched >= 0.5 and not in_cloud:
+                last_sched = t
+                if abs(ts - p) > 2.0:
+                    p = ts
+                    runs += 1
+        if mode in ("closedloop", "hybrid"):
+            if t - last_ldr >= (2.0 / 60.0):
+                last_ldr = t
+                delta = (ts - p) if not in_cloud else 0.0
+                # cam bien nhan direct*DNI; khi may thi tin hieu rat yeu
+                d_eff = rad(delta)
+                lp = ADC_MAX * direct * max(0.0, math.cos(d_eff + BETA_S)) + ADC_DIFF
+                rp = ADC_MAX * direct * max(0.0, math.cos(d_eff - BETA_S)) + ADC_DIFF
+                lp *= 1 + random.gauss(0, 0.02)
+                rp *= 1 + random.gauss(0, 0.02)
+                e1 = lp - rp
+                if not in_cloud and abs(e1) > NGUONG_E1:
+                    step = 5.0 if abs(e1) > 3 * NGUONG_E1 else 1.5
+                    p += step if e1 < 0 else -step   # e1<0: ben phai (Tay) sang hon -> quay ve Tay
+                    runs += 1
+        errs.append(abs(ts - p))
+        track.append((t, p, ts))
+        t += dt
+    mean_e = sum(errs) / len(errs)
+    max_e = max(errs)
+    return mean_e, max_e, runs, track
+
+
+# ---------------------------------------------------------------- ve
+def style_ax(ax):
+    ax.set_facecolor("white")
+    for s in ax.spines.values():
+        s.set_color("#444444")
+        s.set_linewidth(0.8)
+    ax.grid(color="#cccccc", lw=0.5, alpha=0.7)
+    ax.tick_params(colors="#222222", labelsize=8.5)
+
+
+def ve_duong_di_mat_troi():
+    fig, (a1, a2) = plt.subplots(2, 1, figsize=(7.6, 6.4), dpi=200, sharex=True)
+    fig.patch.set_facecolor("white")
+    hours = [5 + i * 0.1 for i in range(141)]
+    colors = {"21/3": "#1f77b4", "21/6": "#d62728", "23/9": "#2ca02c", "21/12": "#7f7f7f"}
+    for name, n in DAYS:
+        xs, al, ga = [], [], []
+        for t in hours:
+            a, g = sun_angles(n, t)
+            if a > -2:
+                xs.append(t)
+                al.append(max(a, 0))
+                ga.append(g)
+        a1.plot(xs, al, color=colors[name], lw=1.4, label=name)
+        a2.plot(xs, ga, color=colors[name], lw=1.4, label=name)
+    a1.set_ylabel("Góc cao α (độ)")
+    a2.set_ylabel("Góc phương vị γ (độ, từ Nam)")
+    a2.set_xlabel("Giờ Mặt Trời")
+    a2.axhline(0, color="#999999", lw=0.7)
+    a2.set_xticks(range(5, 20))
+    for a in (a1, a2):
+        style_ax(a)
+    a1.legend(fontsize=8.5, frameon=False, ncol=4)
+    a1.set_title("Đường đi của Mặt Trời tại Mỹ Hào (φ = 20,93°) – 4 ngày đại diện",
+                 fontsize=10, color="#111111")
+    fig.tight_layout()
+    p = os.path.join(OUT, "duong_di_mat_troi.png")
+    fig.savefig(p, facecolor="white", bbox_inches="tight")
+    plt.close(fig)
+    print("da ve:", p)
+
+
+def ve_so_sanh_nang_luong(res):
+    fig, ax = plt.subplots(figsize=(7.6, 4.0), dpi=200)
+    fig.patch.set_facecolor("white")
+    labels = [d[0] for d in DAYS]
+    g1 = [res["gain1"][d[0]] for d in DAYS]
+    g2 = [res["gain2"][d[0]] for d in DAYS]
+    x = range(len(labels))
+    w = 0.36
+    b1 = ax.bar([i - w / 2 for i in x], g1, w, color="#4a7ebb", edgecolor="#2c4d75", lw=0.6)
+    b2 = ax.bar([i + w / 2 for i in x], g2, w, color="#e8a13c", edgecolor="#8a5d16", lw=0.6)
+    for bars in (b1, b2):
+        for r in bars:
+            ax.text(r.get_x() + r.get_width() / 2, r.get_height() + 3,
+                    "+%.0f%%" % r.get_height(), ha="center", fontsize=8.5, color="#111111")
+    ax.set_xticks(list(x))
+    ax.set_xticklabels(labels)
+    ax.set_ylabel("Điện thu được tăng thêm so với tấm cố định (%)")
+    ax.set_ylim(0, max(max(g1), max(g2)) * 1.25)
+    ax.legend([b1, b2], ["Bám 1 trục", "Bám 2 trục"], fontsize=9, frameon=False)
+    ax.set_title("So sánh trực quan: bám nắng thu thêm bao nhiêu điện trong ngày",
+                 fontsize=10, color="#111111")
+    style_ax(ax)
+    fig.tight_layout()
+    p = os.path.join(OUT, "so_sanh_nang_luong.png")
+    fig.savefig(p, facecolor="white", bbox_inches="tight")
+    plt.close(fig)
+    print("da ve:", p)
+
+
+def ve_hoat_dong_hybrid(track):
+    fig, ax = plt.subplots(figsize=(8.2, 4.4), dpi=200)
+    fig.patch.set_facecolor("white")
+    ts = [r[0] for r in track]
+    pp = [r[1] for r in track]
+    ss = [r[2] for r in track]
+    ax.plot(ts, ss, color="#d62728", lw=1.3, label="Góc Mặt Trời (lý tưởng)")
+    ax.plot(ts, pp, color="#1f77b4", lw=1.5, label="Góc tấm pin (hybrid)")
+    ax.axvspan(10, 11, color="#bbbbbb", alpha=0.45, lw=0)
+    ax.text(10.5, -72, "Nhiều mây:\ngiữ vị trí theo lịch", ha="center",
+            fontsize=8.5, color="#333333")
+    ax.annotate("Sáng sớm: di chuyển\ntheo lịch thiên văn", xy=(6.4, -35), xytext=(6.2, -62),
+                fontsize=8.5, color="#333333",
+                arrowprops=dict(arrowstyle="->", color="#333333", lw=0.8))
+    ax.annotate("Giữa trưa: LDR tinh chỉnh\nquanh vị trí cân bằng", xy=(12.6, 8), xytext=(13.2, -48),
+                fontsize=8.5, color="#333333",
+                arrowprops=dict(arrowstyle="->", color="#333333", lw=0.8))
+    ax.set_xlabel("Giờ Mặt Trời")
+    ax.set_ylabel("Góc tấm pin (độ)")
+    ax.set_title("Một ngày làm việc của phương pháp hybrid (21/3, có đám mây 10h–11h)",
+                 fontsize=10, color="#111111")
+    ax.legend(fontsize=9, frameon=False, loc="upper left")
+    style_ax(ax)
+    fig.tight_layout()
+    p = os.path.join(OUT, "hoat_dong_hybrid.png")
+    fig.savefig(p, facecolor="white", bbox_inches="tight")
+    plt.close(fig)
+    print("da ve:", p)
 
 
 def main():
-    import random
-    res = {}
-
-    # ---- 1) năng lượng cả ngày: cố định / thiên văn / LDR / lai (4 ngày, 3 kịch bản mây)
-    print("=== Nang luong thu duoc ca ngay (don vi tuong doi) ===")
-    res["energy"] = []
-    for n, name in DAYS:
-        row = {"ngay": name, "co_dinh": 0.0, "thien_van": 0.0, "ldr": 0.0, "lai": 0.0}
-        for seed in (1, 2, 3):
-            # tấm cố định
-            e_fix = 0.0
-            t = 5.0
-            while t <= 19.0:
-                s = sun_vec(n, t)
-                nf = (0.0, -math.sin(BETA_F), math.cos(BETA_F))
-                ci = max(0.0, nf[0] * s[0] + nf[1] * s[1] + nf[2] * s[2])
-                e_fix += cloud(t, seed) * ci * 2.0
-                t += 2.0 / 60.0
-            row["co_dinh"] += e_fix / 3.0
-            for m in ("thien_van", "ldr", "lai"):
-                _, _, en = run_day(n, m, seed=seed)
-                row[m] += en / 3.0
-        res["energy"].append(row)
-        print("  %-6s co dinh=%6.1f  thien van=%6.1f (+%5.1f%%)  LDR=%6.1f (+%5.1f%%)  lai=%6.1f (+%5.1f%%)"
-              % (name, row["co_dinh"], row["thien_van"],
-                 100 * (row["thien_van"] / row["co_dinh"] - 1),
-                 row["ldr"], 100 * (row["ldr"] / row["co_dinh"] - 1),
-                 row["lai"], 100 * (row["lai"] / row["co_dinh"] - 1)))
-
-    # ---- 2) sai số bám & số lần chạy motor (ngày quang đãng, seed=1)
-    print("=== Sai so bam va so lan chay motor (ngay quang) ===")
-    res["track"] = []
-    for n, name in DAYS:
-        r = {}
-        for m in ("thien_van", "ldr", "lai"):
-            er, mv, _ = run_day(n, m, seed=1)
-            r[m] = (round(er, 2), mv)
-        res["track"].append({"ngay": name, **{k: v for k, v in r.items()}})
-        print("  %-6s thien van %5.2f do/%3d lan | LDR %5.2f do/%3d lan | LAI %5.2f do/%3d lan"
-              % (name, r["thien_van"][0], r["thien_van"][1],
-                 r["ldr"][0], r["ldr"][1], r["lai"][0], r["lai"][1]))
-
-    # ---- 3) ngày nhiều mây: lai giữ lịch nên không dao động
-    print("=== Ngay nhieu may (seed=2): so lan chay motor ===")
-    res["cloudy"] = []
-    for n, name in DAYS:
-        r = {}
-        for m in ("ldr", "lai"):
-            er, mv, _ = run_day(n, m, seed=2)
-            r[m] = (round(er, 2), mv)
-        res["cloudy"].append({"ngay": name, **{k: v for k, v in r.items()}})
-        print("  %-6s LDR %3d lan (sai so %4.2f) | LAI %3d lan (sai so %4.2f)"
-              % (name, r["ldr"][1], r["ldr"][0], r["lai"][1], r["lai"][0]))
-
-    # ---- 4) ví dụ trực quan một lần đọc ma trận LDR (mức ADC 12 bit)
-    ex = []
-    for delt_deg in (0, 3, 6, 10, 15, 20, 30):
-        d = math.radians(delt_deg)
-        l1, l2 = ldr_pair(d)
-        a1, a2 = 2000 * l1, 2000 * l2
-        e = (a1 - a2) / (a1 + a2)
-        ex.append({"delta": delt_deg, "L_phai": round(a1), "L_trai": round(a2),
-                   "e": round(e, 3), "delta_suy_ra": round(math.degrees(delta_hat(a1, a2)), 2)})
-    res["ma_tran"] = ex
-    print("=== Vi du doc ma tran LDR (muc ADC) ===")
-    for r in ex:
-        print("  lech that %+3d do -> L_phai=%4d L_trai=%4d e=%+.3f -> suy ra %+5.2f do"
-              % (r["delta"], r["L_phai"], r["L_trai"], r["e"], r["delta_suy_ra"]))
-
-    # ---- 5) đồ thị ngày 21/6: góc lý tưởng vs góc tấm của luật lai + hệ số mây
-    try:
-        import matplotlib
-        matplotlib.use("Agg")
-        import matplotlib.pyplot as plt
-        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10.5, 7.2), dpi=200,
-                                       sharex=True, gridspec_kw={"height_ratios": [2, 1]})
-        ts, ideal, lai, tv, cl = [], [], [], [], []
-        rho_l = rho_star(sun_vec(172, 5.0))
-        rho_t = rho_l
-        t = 5.0
-        while t <= 19.0:
-            s = sun_vec(172, t)
-            rs = rho_star(s)
-            c = cloud(t, 1)
-            ts.append(t)
-            ideal.append(math.degrees(rs))
-            cl.append(c)
-            # luật lai
-            d = rs - rho_l
-            l1, l2 = ldr_pair(d, 1.03, 0.97, 0.10 * math.cos(d) * (1 - c))
-            dh = delta_hat(l1, l2)
-            if c >= 0.45 and abs(dh) > DELTA_DEAD:
-                rho_l += dh
-            elif abs(rs - rho_l) > math.radians(6.0):
-                rho_l = rs
-            lai.append(math.degrees(rho_l))
-            tv.append(math.degrees(rs))
-            t += 2.0 / 60.0
-        ax1.plot(ts, ideal, color="#1f3864", lw=2.2, label="Góc Mặt Trời lý tưởng (thiên văn)")
-        ax1.plot(ts, lai, color="#c0504d", lw=1.8, ls="--",
-                 label="Góc tấm pin thực tế (luật lai)")
-        ax1.set_ylabel("Góc quay Đông–Tây (độ)")
-        ax1.legend(loc="lower center", fontsize=9)
-        ax1.grid(alpha=0.3)
-        ax1.set_title("Ngày 21/6 tại Mỹ Hào: luật lai bám sát góc lý tưởng",
-                      fontsize=12, fontweight="bold", color="#16324f")
-        ax2.fill_between(ts, 0, cl, color="#8ea9d1", alpha=0.55)
-        ax2.set_ylim(0, 1.05)
-        ax2.set_ylabel("Hệ số nắng")
-        ax2.set_xlabel("Giờ trong ngày (giờ Mặt Trời)")
-        ax2.grid(alpha=0.3)
-        fig.tight_layout()
-        os.makedirs(OUT, exist_ok=True)
-        fig.savefig(os.path.join(OUT, "ket_qua_mo_phong_1_truc.png"),
-                    facecolor="white", bbox_inches="tight", pad_inches=0.2)
-        plt.close(fig)
-        print("da ve: ket_qua_mo_phong_1_truc.png")
-
-        # bieu do cot: nang luong trong ngay, tam co dinh = 100%
-        names = [r["ngay"] for r in res["energy"]]
-        fig2, ax = plt.subplots(figsize=(9.5, 4.6), dpi=200)
-        x = range(len(names))
-        w = 0.26
-        tv = [100 * r["thien_van"] / r["co_dinh"] for r in res["energy"]]
-        ld = [100 * r["ldr"] / r["co_dinh"] for r in res["energy"]]
-        ll = [100 * r["lai"] / r["co_dinh"] for r in res["energy"]]
-        ax.bar([i - w for i in x], tv, w, color="#8ea9d1", label="Thiên văn (vòng hở)")
-        ax.bar(list(x), ld, w, color="#c0504d", label="LDR thuần (vòng kín)")
-        ax.bar([i + w for i in x], ll, w, color="#4f8a4f", label="Lai thiên văn + LDR")
-        ax.axhline(100, color="#404040", lw=1.2, ls=":")
-        ax.text(0.02, 103, "tấm cố định = 100%", fontsize=9, color="#404040")
-        ax.set_xticks(list(x))
-        ax.set_xticklabels(names)
-        ax.set_ylabel("Năng lượng thu được trong ngày (%)")
-        ax.set_title("Năng lượng thu được so với tấm cố định (trung bình 3 kịch bản mây)",
-                     fontsize=11.5, fontweight="bold", color="#16324f")
-        ax.legend(fontsize=9)
-        ax.grid(axis="y", alpha=0.3)
-        for i, v in enumerate(ll):
-            ax.text(i + w, v + 3, "%.0f%%" % v, ha="center", fontsize=8.5)
-        fig2.tight_layout()
-        fig2.savefig(os.path.join(OUT, "ket_qua_nang_luong.png"),
-                     facecolor="white", bbox_inches="tight", pad_inches=0.2)
-        plt.close(fig2)
-        print("da ve: ket_qua_nang_luong.png")
-    except Exception as exc:  # pragma: no cover
-        print("khong ve duoc hinh:", exc)
-
     os.makedirs(OUT, exist_ok=True)
+    res = {"phi": PHI, "beta_s": 30.0, "gain1": {}, "gain2": {}, "matrix": {},
+           "adc_table": [], "modes": {}, "delta_days": {}}
+
+    print("=== Nang luong thu duoc (don vi tuong doi) ===")
+    for name, n in DAYS:
+        f = day_energy(n, "fixed")
+        a1 = day_energy(n, "1axis")
+        a2 = day_energy(n, "2axis")
+        res["gain1"][name] = (a1 / f - 1) * 100
+        res["gain2"][name] = (a2 / f - 1) * 100
+        res["delta_days"][name] = declination(n)
+        print("  %6s co dinh=%6.1f  1 truc=%6.1f (+%4.1f%%)  2 truc=%6.1f (+%4.1f%%)"
+              % (name, f, a1, res["gain1"][name], a2, res["gain2"][name]))
+
+    print("=== Ma tran tinh toan goc (alpha / gamma theo gio) ===")
+    gio = list(range(6, 19))
+    res["hours"] = gio
+    for name, n in DAYS:
+        m = {}
+        for h in gio:
+            a, g = sun_angles(n, h)
+            m[str(h)] = [round(a, 1), round(g, 1)]
+        res["matrix"][name] = m
+        line = " ".join("%dh:%.0f/%.0f" % (h, m[str(h)][0], m[str(h)][1]) for h in (7, 10, 12, 14, 17))
+        print("  %6s delta=%+5.1f  %s" % (name, declination(n), line))
+
+    print("=== Bang ADC minh hoa (e1 = ADC trai - ADC phai) ===")
+    res["adc_table"] = bang_adc_minh_hoa()
+    for r in res["adc_table"]:
+        print("  lech %+3d do: trai=%4d phai=%4d e1=%+5d -> %s" % tuple(r))
+
+    print("=== Mo phong 1 ngay 21/3 (co dam may 10h-11h) ===")
+    for mode, label in (("openloop", "Vong ho thien van (30 phut/lan)"),
+                        ("closedloop", "Vong kin LDR (2 phut/lan)"),
+                        ("hybrid", "HYBRID (ho + kin)")):
+        me, mx, runs, track = simulate_day(80, mode)
+        res["modes"][mode] = {"mean": round(me, 2), "max": round(mx, 2), "runs": runs}
+        print("  %-36s sai so TB=%4.1f do  max=%4.1f do  %3d lan chay motor"
+              % (label, me, mx, runs))
+        if mode == "hybrid":
+            ve_hoat_dong_hybrid(track)
+
+    ve_duong_di_mat_troi()
+    ve_so_sanh_nang_luong(res)
     with open(os.path.join(OUT, "ket_qua_mo_phong.json"), "w", encoding="utf-8") as f:
         json.dump(res, f, ensure_ascii=False, indent=1)
-    print("da ghi: hinh_ve/ket_qua_mo_phong.json")
+    print("da ghi:", os.path.join(OUT, "ket_qua_mo_phong.json"))
 
 
 if __name__ == "__main__":

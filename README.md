@@ -1,65 +1,57 @@
-# Báo cáo đồ án bám nắng mặt trời – 6 quyển, phương pháp LAI thiên văn + LDR
+# Báo cáo đồ án bám nắng mặt trời – 6 quyển × 2 đồ án (bản hybrid)
 
-Kho chứa hai bản báo cáo gốc và **6 file Word + 6 file PDF riêng** (mỗi báo cáo
-một PDF) cùng một PDF gộp. Phương pháp điều khiển của bản này là
-**phương pháp lai**:
+Hai đồ án, mỗi đồ án 3 quyển (**Nghiên cứu – Chế tạo – Lập trình**), đánh số theo
+CHƯƠNG, tuần báo cáo **5/10 – 10/10/2026**:
 
-- **Vòng hở thiên văn**: đọc giờ thực từ module **DS1307**, tính xích vĩ δ,
-  góc giờ H, góc cao α và phương vị γ từ vĩ độ/kinh độ Mỹ Hào → góc lệnh thô.
-- **Vòng kín LDR**: ma trận 4 quang trở có **vách che chữ thập** giữa cụm,
-  `e1 = ADC(trái) − ADC(phải)`, `e2 = ADC(trên) − ADC(dưới)`; lệch vượt ngưỡng
-  chết 3° thì tinh chỉnh motor một bước.
-- **Trời nhiều mây** (tổng sáng dưới ngưỡng): bỏ LDR, giữ vị trí theo lịch
-  thiên văn để tránh dao động vô ích.
+- **Đồ án 1 (một trục)**: Nghiên cứu thuật toán đo cường độ ánh sáng để xác định
+  hướng điều khiển tấm pin ứng dụng trong hệ thống pin năng lượng mặt trời.
+- **Đồ án 2 (hai trục)**: Nghiên cứu thuật toán điều khiển điều hướng tấm pin
+  ứng dụng trong hệ thống pin năng lượng mặt trời (quyển chế tạo nói về cấu trúc 3D).
 
-Phần cứng mô tả đúng theo mạch đã thiết kế trên **EasyEDA**: ESP32 DevKit,
-cầu H 4×TIP41C cách ly bằng opto PC817, nguồn LM2596 (3,3 V) và 7805 (5 V),
-chống ngược cực 1N4007, công tắc hành trình qt1…qt4 kéo xuống 1k, màn hình
-**LCD I²C 1602**, động cơ gạt nước ô tô trục vít tự giữ vị trí. ADC chỉ đo
-điện áp, chưa đo dòng điện.
+## Phương pháp: HYBRID (thiên văn + LDR)
 
-## 1. Sáu báo cáo (mỗi báo cáo 1 file Word + 1 file PDF)
+- **Nhóm 1 – vòng hở thiên văn**: δ = 23,45°·sin[360°·(284+n)/365]; H = 15°·(t−12);
+  sin α = sin φ·sin δ + cos φ·cos δ·cos H; γ tính từ (α, δ, φ). Đọc ngày giờ từ
+  **DS1307** để định vị thô mỗi 30 phút.
+- **Nhóm 2 – vòng kín LDR**: 4 LDR ở 4 góc có vách che giữa;
+  e1 = ADC(trái) − ADC(phải), e2 = ADC(trên) − ADC(dưới); |e| > ngưỡng thì quay
+  motor theo dấu e, ngược lại dừng (vùng chết chống dao động).
+- **Nhóm 3 – hybrid (lựa chọn)**: thiên văn định vị thô buổi sáng và mỗi chu kỳ,
+  LDR tinh chỉnh khi gần đúng, trời nhiều mây thì giữ vị trí theo lịch.
 
-| Báo cáo | File | Nội dung chính |
-|---|---|---|
-| 1 | `Bao_cao_1_truc_Nghien_cuu` | Chương 2 chỉ còn 3 phương pháp (quang trở / thời gian / lai); Chương 3 kết quả mô phỏng trực quan: ma trận tính toán LDR, sai số ngày nắng/ngày mây, năng lượng so tấm cố định; Chương 4 tiến độ |
-| 2 | `Bao_cao_1_truc_Che_tao` | Phương án thiết kế; tính chọn động cơ cho tấm pin 4 kg – 100 W; Chương 3 chế tạo mạch theo EasyEDA (7 sơ đồ), hiệu chuẩn và đo đạc |
-| 3 | `Bao_cao_1_truc_Lap_trinh` | Chương 1 tổng quan hệ + Arduino IDE + ESP32 DevKit; Chương 2 nhóm lệnh; Chương 3 đọc ADC, điều khiển động cơ, DS1307, LCD I²C, biến trở góc nghiêng, 5 lưu đồ, code mẫu |
-| 4 | `Bao_cao_2_truc_Nghien_cuu` | Như báo cáo 1 cho hệ hai trục (thêm e2, trục nghiêng) |
-| 5 | `Bao_cao_2_truc_Che_tao` | Như báo cáo 2 với hai cầu H, bốn opto, bốn hành trình |
-| 6 | `Bao_cao_2_truc_Lap_trinh` | Như báo cáo 3 với code hai trục, nghiêng trước – phương vị sau |
+## Phần cứng thực tế đưa vào báo cáo
 
-Kèm theo: `Bao_cao_day_du_6_phan.pdf` – PDF gộp cả 6 quyển có trang bìa.
+ESP32 DevKit (LDR: GPIO25/26/27/14; biến trở GPIO36 (+GPIO2 bản 2 trục); áp tấm
+pin GPIO39; hành trình qt1–qt4 GPIO34/35/32/33; lệnh motor GPIO19/18 (+5/13);
+I²C GPIO21/22) • **mạch động lực cầu H 4 TIP41C** + diode bảo vệ, lệnh tích cực
+thấp qua **opto PC817** • **motor gạt nước 12 V trục vít tự hãm** • **DS1307**
+(I²C 0x68) • **LCD 1602 + PCF8574** (0x27) hiển thị giờ và góc • nguồn 12 V qua
+1N4007, LM2596 3,3 V và 7805 5 V • tấm pin **100 W – 4 kg** (bảng tính chọn động
+cơ đã tính lại). ADC chỉ đo điện áp, chưa đo dòng điện.
 
-## 2. Số liệu mô phỏng (tools/mo_phong.py)
+## File đầu ra
 
-- Ngày nắng: sai số bám thiên văn ≈ 2,6° (lệch lắp đặt), LDR thuần ≈ 0,8°,
-  lai ≈ 1,1–1,3°; số lần chạy motor 75 / 86 / 142.
-- Ngày nhiều mây: LDR thuần lạc hướng 70–90°, lai giữ 1,6–1,7° theo lịch.
-- Năng lượng so tấm cố định nghiêng 21°: lai đạt 157% (21/6) đến 478% (21/12).
-- Ma trận tính toán LDR: góc suy ra trùng góc đặt 0–30°, ngưỡng chết e = 0,030.
+| File | Nội dung |
+|---|---|
+| `Bao_cao_{1,2}_truc_Nghien_cuu.docx/.pdf` | Nghiên cứu phương pháp hybrid + mô phỏng trực quan + ma trận tính toán (chương 4) |
+| `Bao_cao_{1,2}_truc_Che_tao.docx/.pdf` | Chế tạo: mạch EasyEDA (7 sheet trong `hinh_ve/mach/`), mạch động lực, cơ khí / cấu trúc 3D, tính chọn motor |
+| `Bao_cao_{1,2}_truc_Lap_trinh.docx/.pdf` | Lập trình: chương 1 tổng quan, chương 2 Arduino IDE + ESP32 DevKit + nhóm lệnh, chương 3 chế tạo–hiệu chuẩn–đo đạc + phương pháp đọc ADC/điều khiển motor/DS1307/LCD/biến trở + lưu đồ từng phần và tổng quát + code mẫu |
+| `Bao_cao_day_du_6_phan.pdf` | Bản gộp cả 6 quyển |
 
-## 3. Thư mục hỗ trợ
+Mỗi báo cáo có **1 file PDF riêng** (`Bao_cao_pdf_*.pdf`) dùng khi không có Word.
 
-- `hinh_ve/`: sơ đồ khối, sơ đồ kết nối, bố trí LDR có vách che, 5 lưu đồ
-  (tổng quát + 4 lưu đồ từng phần), 2 đồ thị kết quả mô phỏng.
-- `hinh_ve/mach/`: bản vẽ lại 7 khối mạch EasyEDA (cầu H TIP41C, opto PC817,
-  hành trình, ESP32, nguồn LM2596, 7805 + LCD, DS1307). Nếu có bản xuất PNG
-  gốc từ EasyEDA, đặt trùng tên vào thư mục này rồi dựng lại để thay tự động.
-- `tools/mo_phong.py`: mô phỏng ba phương pháp (thiên văn / LDR / lai).
-- `tools/ve_hinh.py`: sinh toàn bộ PNG phong cách bản vẽ kỹ thuật.
-- `tools/trich_xuat.py`: trích Chương 1–2 bản gốc (nguyên văn), thay mục
-  2.4/2.5 và 2.9 theo phương án mới, vá câu chữ, ghép 6 quyển.
-- `tools/noi_dung_moi_1_truc.py`, `tools/noi_dung_moi_2_truc.py`: nội dung mới.
-- `tools/build_bao_cao.py`: dựng 6 file `.docx` (có khối code).
-- `tools/xuat_pdf.py`: dựng 6 PDF riêng + 1 PDF gộp.
-
-## 4. Dựng lại toàn bộ
+## Dựng lại toàn bộ
 
 ```bash
 pip install python-docx reportlab matplotlib pillow
-python3 tools/mo_phong.py
-python3 tools/ve_hinh.py
-python3 tools/build_bao_cao.py
-python3 tools/xuat_pdf.py
+python3 tools/mo_phong.py      # số liệu + đồ thị trực quan + ket_qua_mo_phong.json
+python3 tools/ve_hinh.py       # sơ đồ khối, kết nối, 3 phương pháp, 6 lưu đồ
+python3 tools/build_bao_cao.py # 6 file Word
+python3 tools/xuat_pdf.py      # 6 PDF riêng + 1 PDF gộp
 ```
+
+- `tools/trich_xuat.py`: trích nguyên văn Chương 1–2 của hai bản Word gốc cho
+  quyển nghiên cứu (riêng mục 2.4/2.5 và 2.9 được thay bằng nội dung hybrid),
+  ghép nội dung mới từ `tools/noi_dung_moi_{1,2}_truc.py`, đánh số Hình/Bảng.
+- `hinh_ve/mach/`: 7 sheet mạch nguyên lý EasyEDA do sinh viên thiết kế.
+- Bản vẽ cơ khí tấm pin đang được vẽ lại, sẽ bổ sung sau.

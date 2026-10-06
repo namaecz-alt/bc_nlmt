@@ -120,7 +120,7 @@ PATCHES_1 = [
     ("Cơ cấu chấp hành phù hợp tải + công tắc hành trình.",
      "Động cơ gạt nước trục vít phù hợp tải + công tắc hành trình."),
     ("Đo U, I pin và điện năng actuator.",
-     "Đo U, I pin và điện năng động cơ gạt nước."),
+     "Đo điện áp tấm pin và trạng thái động cơ gạt nước."),
     ("[9] Arduino, Arduino Mega 2560 Rev3 - Technical Specifications. https://docs.arduino.cc/hardware/mega-2560/",
      "[9] Espressif Systems, ESP32-DevKitC General Purpose Development Board User Guide. https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32/esp32-devkitc/index.html"),
     ("[10] ROHM Semiconductor, BH1750FVI Digital 16-bit Serial Output Type Ambient Light Sensor IC, Datasheet.",
@@ -171,7 +171,7 @@ PATCHES_2 = [
     ("Servo vị trí + nguồn riêng.", "Motor gạt nước trục vít + nguồn 12 V riêng."),
     ("Quay tấm pin trái/phải theo góc đặt.", "Quay tấm pin trái/phải tới góc đích theo hồi tiếp biến trở."),
     ("Motor DC giảm tốc + encoder + cầu H.", "Motor gạt nước trục vít + relay/cầu H."),
-    ("Đo U/I PV và điện năng hai cơ cấu.", "Đo U/I PV và điện năng hai động cơ gạt nước."),
+    ("Đo U/I PV và điện năng hai cơ cấu.", "Đo điện áp tấm pin và trạng thái hai động cơ gạt nước."),
     # Tai lieu tham khao: DS3231 -> DS1307 dung theo mach thuc te
     ("https://www.analog.com/media/en/technical-documentation/data-sheets/DS3231.pdf",
      "https://www.analog.com/media/en/technical-documentation/data-sheets/DS1307.pdf"),
@@ -234,28 +234,39 @@ def compose(report):
         + [("h1", moi.CHE_TAO_H1_CH3)] + moi.CHE_TAO_CH3 \
         + [("h1", moi.CHE_TAO_H1_CH4)] + moi.CHE_TAO_CH4 + refs
 
-    lt = [("h1", moi.LAP_TRINH_H1_CH1)] + moi.LAP_TRINH_CH1 \
+    lt = ch1 + moi.LAP_TRINH_CH1_THEM \
         + [("h1", moi.LAP_TRINH_H1_CH2)] + moi.LAP_TRINH_CH2 \
-        + [("h1", moi.LAP_TRINH_H1_CH3)] + moi.LAP_TRINH_CH3 \
+        + [("h1", moi.LAP_TRINH_H1_CH3)] + moi.LAP_TRINH_CH3 + moi.LAP_TRINH_CH3_CODE \
         + [("h1", moi.LAP_TRINH_H1_CH4)] + moi.LAP_TRINH_CH4 + refs
 
     num = Numberer
     return num().run(nc), num().run(ct), num().run(lt)
 
 
+DE_TAI = {
+    1: "NGHIÊN CỨU THUẬT TOÁN ĐO CƯỜNG ĐỘ ÁNH SÁNG ĐỂ XÁC ĐỊNH HƯỚNG "
+       "ĐIỀU KHIỂN TẤM PIN ỨNG DỤNG TRONG HỆ THỐNG PIN NĂNG LƯỢNG MẶT TRỜI",
+    2: "NGHIÊN CỨU THUẬT TOÁN ĐIỀU KHIỂN ĐIỀU HƯỚNG TẤM PIN ỨNG DỤNG "
+       "TRONG HỆ THỐNG PIN NĂNG LƯỢNG MẶT TRỜI",
+}
+TEN_QUYEN = {"Nghien_cuu": "QUYỂN 1 – NGHIÊN CỨU PHƯƠNG PHÁP",
+             "Che_tao": "QUYỂN 2 – CHẾ TẠO MẠCH VÀ CƠ KHÍ",
+             "Lap_trinh": "QUYỂN 3 – LẬP TRÌNH VÀ HIỆU CHUẨN"}
+
+
 def all_specs():
     """(spec, report) x 6, dung chung cho build_bao_cao.py va xuat_pdf.py."""
     out = []
     for r in (1, 2):
-        t = "%d-trục" % r
         for idx, (name, blocks) in enumerate(
                 zip(("Nghien_cuu", "Che_tao", "Lap_trinh"), compose(r))):
             out.append((
                 {"out": os.path.join(BASE, "Bao_cao_%d_truc_%s.docx" % (r, name)),
-                 "title": "BÁO CÁO %s ĐỒ ÁN ĐIỀU KHIỂN BÁM MẶT TRỜI %s"
-                          % ({"Nghien_cuu": "NGHIÊN CỨU", "Che_tao": "CHẾ TẠO",
-                              "Lap_trinh": "LẬP TRÌNH"}[name], t.upper()),
-                 "subtitle": "Quyển %d/3 – bộ báo cáo %s (%d quyển)" % (idx + 1, t, 6),
+                 "pdf": os.path.join(BASE, "Bao_cao_pdf_%d_truc_%s.pdf" % (r, name)),
+                 "title": "ĐỒ ÁN %d (mô hình %s trục)" % (r, r),
+                 "de_tai": DE_TAI[r],
+                 "quyen": TEN_QUYEN[name],
+                 "subtitle": "Quyển %d/3 – tuần báo cáo 5/10 – 10/10/2026" % (idx + 1),
                  "blocks": blocks}, r))
     return out
 
