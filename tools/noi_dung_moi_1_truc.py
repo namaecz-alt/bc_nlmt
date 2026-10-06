@@ -508,7 +508,7 @@ NGHIEN_CUU_CH3.extend([
 CHE_TAO_CH1.extend([
     ("h2", "1.5. Tổng hợp các kết quả tiếp nhận từ quyển nghiên cứu"),
     ("tbl", [
-        ["Nội dung đã chốt ở quyển nghiên cứu", "Giá trị", "Áp dụng trong quyển chế tạo"],
+        ["Nội dung đã hoàn thành ở quyển nghiên cứu", "Giá trị", "Áp dụng trong quyển chế tạo"],
         ["Phương pháp điều khiển", "Hybrid: thiên văn định vị thô + LDR tinh chỉnh + giữ vị trí theo lịch khi mây mù", "Nguyên lý mục 1.1 và sơ đồ khối mục 1.2."],
         ["Ngưỡng phát lệnh", "|e| > 200 mức ADC (lệch khoảng 4°)", "Chọn mạch chia áp và dải đo cho kênh LDR."],
         ["Vùng chết dừng motor", "120 mức ADC", "Cài đặt liên động và chu kỳ kiểm tra."],
@@ -522,7 +522,7 @@ CHE_TAO_CH1.extend([
 LAP_TRINH_CH2.extend([
     ("h2", "2.5. Các tham số và kết quả kế thừa từ quyển nghiên cứu"),
     ("tbl", [
-        ["Đại lượng", "Giá trị chốt trong quyển nghiên cứu", "Dùng trong code"],
+        ["Đại lượng", "Giá trị đã thống nhất trong quyển nghiên cứu", "Dùng trong code"],
         ["Chu kỳ nhánh thiên văn", "30 phút", "Hằng số T_TV = 1800000 ms."],
         ["Chu kỳ nhánh LDR", "2 phút", "Hằng số T_LDR = 120000 ms."],
         ["Ngưỡng phát lệnh", "|e| > 200 mức ADC", "Hằng số NGUONG trong lệnh so sánh."],
@@ -534,3 +534,14 @@ LAP_TRINH_CH2.extend([
         ["Chuẩn hóa γ trưa hạ chí", "Bước nhảy 180° tại vĩ độ 20,93°", "Hàm gocThienVan() trong code mẫu."],
     ], "{B}. Tham số kế thừa từ quyển nghiên cứu đưa vào chương trình"),
 ])
+
+# Muc ket cua Chuong 2 quyen che tao: so do khoi + bang ket qua tiep nhan
+CHE_TAO_TIEP_NHAN = [
+    ("h2", "2.8. Sơ đồ khối tổng thể và các kết quả tiếp nhận từ quyển nghiên cứu"),
+    ("img", "hinh_ve/so_do_khoi_1_truc.png",
+     "{H}. Sơ đồ khối hệ thống một trục theo phương pháp hybrid"),
+    ("p", "Sơ đồ khối trên cụ thể hóa phương pháp hybrid đã nghiên cứu thành các "
+          "khối mạch và cơ khí sẽ chế tạo ở chương 3; bảng dưới đây tổng hợp các "
+          "kết quả đã hoàn thành ở quyển nghiên cứu và nơi áp dụng trong quyển "
+          "chế tạo."),
+] + [b for b in CHE_TAO_CH1 if b[0] == "tbl"][-1:]

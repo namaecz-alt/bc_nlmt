@@ -483,7 +483,7 @@ NGHIEN_CUU_CH3.extend([
 CHE_TAO_CH1.extend([
     ("h2", "1.5. Tổng hợp các kết quả tiếp nhận từ quyển nghiên cứu"),
     ("tbl", [
-        ["Nội dung đã chốt ở quyển nghiên cứu", "Giá trị", "Áp dụng trong quyển chế tạo"],
+        ["Nội dung đã hoàn thành ở quyển nghiên cứu", "Giá trị", "Áp dụng trong quyển chế tạo"],
         ["Phương pháp điều khiển", "Hybrid hai khớp: thiên văn thô + LDR tinh chỉnh (e2 nghiêng trước, e1 phương vị sau) + giữ vị trí khi mây mù", "Nguyên lý mục 1.1 và sơ đồ khối mục 1.2."],
         ["Ngưỡng phát lệnh / vùng chết", "|e| > 200 / dừng dưới 120 mức ADC", "Mạch chia áp, cài liên động từng khớp."],
         ["Ngưỡng mây mù S_min", "Tổng 4 kênh < 2500", "Nhánh giữ vị trí theo lịch."],
@@ -496,7 +496,7 @@ CHE_TAO_CH1.extend([
 LAP_TRINH_CH2.extend([
     ("h2", "2.5. Các tham số và kết quả kế thừa từ quyển nghiên cứu"),
     ("tbl", [
-        ["Đại lượng", "Giá trị chốt trong quyển nghiên cứu", "Dùng trong code"],
+        ["Đại lượng", "Giá trị đã thống nhất trong quyển nghiên cứu", "Dùng trong code"],
         ["Chu kỳ thiên văn / LDR", "30 phút / 2 phút", "T_TV = 1800000 ms; T_LDR = 120000 ms."],
         ["Ngưỡng / vùng chết", "|e| > 200 / 120 mức ADC", "Hằng số NGUONG và điều kiện dừng."],
         ["Ngưỡng mây mù S_min", "2500 (tổng bốn kênh)", "Nhánh giữ vị trí cả hai khớp."],
@@ -506,3 +506,14 @@ LAP_TRINH_CH2.extend([
         ["Ma trận (α, γ) và chuẩn hóa 180°", "Chương 4 quyển nghiên cứu", "Hàm thienVan() và bảng đối chiếu."],
     ], "{B}. Tham số kế thừa từ quyển nghiên cứu đưa vào chương trình hai trục"),
 ])
+
+# Muc ket cua Chuong 2 quyen che tao: so do khoi + bang ket qua tiep nhan
+CHE_TAO_TIEP_NHAN = [
+    ("h2", "2.8. Sơ đồ khối tổng thể và các kết quả tiếp nhận từ quyển nghiên cứu"),
+    ("img", "hinh_ve/so_do_khoi_2_truc.png",
+     "{H}. Sơ đồ khối hệ thống hai trục theo phương pháp hybrid"),
+    ("p", "Sơ đồ khối trên cụ thể hóa phương pháp hybrid đã nghiên cứu thành các "
+          "khối mạch, khớp quay và chi tiết in 3D sẽ chế tạo ở chương 3; bảng "
+          "dưới đây tổng hợp các kết quả đã hoàn thành ở quyển nghiên cứu và "
+          "nơi áp dụng trong quyển chế tạo."),
+] + [b for b in CHE_TAO_CH1 if b[0] == "tbl"][-1:]

@@ -36,31 +36,73 @@ def _clean(s):
 
 
 def load_blocks(path):
-    """Doc docx -> danh sach khoi (loai, noi dung) theo thu tu ban goc."""
+    """Doc docx -> danh sach khoi (loai, noi dung) theo DUNG thu tu than bai
+    (doan van va bang xen ke nhau nhu trong Word)."""
+    from docx.table import Table
+    from docx.text.paragraph import Paragraph
     doc = Document(path)
-    styles, blocks = {}, []
-    for p in doc.paragraphs:
-        t = _clean(p.text)
-        if not t:
-            continue
-        style = (p.style.name or "").lower()
-        if style.startswith("heading 1"):
-            blocks.append(("h1", t))
-        elif style.startswith("heading 2"):
-            blocks.append(("h2", t))
-        elif style.startswith("heading 3"):
-            blocks.append(("h3", t))
-        elif "list" in style:
-            blocks.append(("b", t))
-        elif t.startswith("S =") or t.startswith("e_") or t.startswith("R_") or \
-                t.startswith("f(") or (len(t) < 60 and "=" in t and t[0].isupper()):
-            blocks.append(("eq", t))
-        else:
-            blocks.append(("p", t))
-    for tbl in doc.tables:
-        rows = [[_clean(c.text) for c in r.cells] for r in tbl.rows]
-        blocks.append(("tbl", rows, None))
+    blocks = []
+    for child in doc.element.body.iterchildren():
+        tag = child.tag.split("}")[-1]
+        if tag == "p":
+            p = Paragraph(child, doc)
+            t = _clean(p.text)
+            if not t:
+                continue
+            style = (p.style.name or "").lower()
+            if style.startswith("heading 1"):
+                blocks.append(("h1", t))
+            elif style.startswith("heading 2"):
+                blocks.append(("h2", t))
+            elif style.startswith("heading 3"):
+                blocks.append(("h3", t))
+            elif "list" in style:
+                blocks.append(("b", t))
+            elif t.startswith("S =") or t.startswith("e_") or t.startswith("R_") or \
+                    t.startswith("f(") or (len(t) < 60 and "=" in t and t[0].isupper()):
+                blocks.append(("eq", t))
+            else:
+                blocks.append(("p", t))
+        elif tag == "tbl":
+            tbl = Table(child, doc)
+            rows = [[_clean(c.text) for c in r.cells] for r in tbl.rows]
+            blocks.append(("tbl", rows, None))
     return blocks
+
+
+def sections_of(ch_blocks):
+    """Tach mot chuong thanh dict {so muc h2: khoi cua muc do}."""
+    idx = [i for i, b in enumerate(ch_blocks) if b[0] == "h2"]
+    secs = {}
+    for k, i in enumerate(idx):
+        j = idx[k + 1] if k + 1 < len(idx) else len(ch_blocks)
+        m = re.match(r"(2\.\d+)\.", ch_blocks[i][1])
+        if m:
+            secs[m.group(1)] = ch_blocks[i:j]
+    return secs
+
+
+def pick(secs, numbers):
+    out = []
+    for n in numbers:
+        if n not in secs:
+            raise KeyError("thieu muc %s trong chuong 2 goc" % n)
+        out.extend(secs[n])
+    return out
+
+
+def renum(blocks, mapping):
+    """Doi so muc h2/h3 theo mapping {'2.9': '2.7', ...}, giu nguyen cap con."""
+    out = []
+    for b in blocks:
+        if b[0] in ("h2", "h3"):
+            t = re.sub(r"^(\d+\.\d+)((?:\.\d+)*)\.",
+                       lambda m: mapping.get(m.group(1), m.group(1)) + m.group(2) + ".",
+                       b[1])
+            out.append((b[0], t))
+        else:
+            out.append(b)
+    return out
 
 
 def cut(blocks, start, end=None):
@@ -212,7 +254,11 @@ class Numberer(object):
 
 
 def compose(report):
-    """Tra ve (nghien_cuu, che_tao, lap_trinh) - moi phan la danh sach khoi."""
+    """Tra ve (nghien_cuu, che_tao, lap_trinh) - moi phan la danh sach khoi.
+
+    Suon chung theo tung do an: ca 3 quyen dung CHUNG Chuong 1 cua bao cao
+    nghien cuu va mot phan Chuong 2 (co so ly thuyet); tu Chuong 3 moi chuyen
+    sang cong viec cu the cua tung quyen (nghien cuu / che tao / lap trinh)."""
     moi = moi1 if report == 1 else moi2
     fname = FILE_1 if report == 1 else FILE_2
     base = load_blocks(fname)
@@ -226,16 +272,40 @@ def compose(report):
     ch1 = patch(ch1, pairs)
     refs = patch(refs, pairs)
 
+    secs = sections_of(ch2)
+    ch2_h1 = next(b for b in ch2 if b[0] == "h1")
+
+    # --- Quyen Nghien cuu: ch1 + ch2 day du + ch3 mo phong + ch4 ma tran ---
     nc = ch1 + ch2 + [("h1", moi.NGHIEN_CUU_H1_CH3)] + moi.NGHIEN_CUU_CH3 \
         + [("h1", moi.NGHIEN_CUU_H1_CH4)] + moi.NGHIEN_CUU_CH4 + refs
 
-    ct = [("h1", moi.CHE_TAO_H1_CH1)] + moi.CHE_TAO_CH1 \
-        + [("h1", moi.CHE_TAO_H1_CH2)] + moi.CHE_TAO_CH2 \
-        + [("h1", moi.CHE_TAO_H1_CH3)] + moi.CHE_TAO_CH3 \
+    # --- Quyen Che tao: ch1 chung; ch2 = phan linh kien + phuong phap ---
+    ct_ch2 = [ch2_h1] \
+        + pick(secs, ["2.1", "2.2", "2.3", "2.4", "2.5", "2.6"]) \
+        + renum(pick(secs, ["2.9"]), {"2.9": "2.7"}) \
+        + moi.CHE_TAO_TIEP_NHAN
+    n2 = sum(1 for b in moi.CHE_TAO_CH2 if b[0] == "h2")
+    map_ct2 = {"2.%d" % i: "3.%d" % i for i in range(1, n2 + 1)}
+    map_ct3 = {"3.%d" % i: "3.%d" % (i + n2) for i in range(1, 12)}
+    ct_ch3_title = (
+        "CHƯƠNG 3. CHẾ TẠO MẠCH ĐIỆN, CƠ KHÍ, LẮP RÁP, HIỆU CHUẨN VÀ ĐO ĐẠC"
+        if report == 1 else
+        "CHƯƠNG 3. CHẾ TẠO CẤU TRÚC 3D, MẠCH ĐIỆN, LẮP RÁP, HIỆU CHUẨN VÀ ĐO ĐẠC")
+    ct = ch1 + ct_ch2 + [("h1", ct_ch3_title)] \
+        + renum(moi.CHE_TAO_CH2, map_ct2) + renum(moi.CHE_TAO_CH3, map_ct3) \
         + [("h1", moi.CHE_TAO_H1_CH4)] + moi.CHE_TAO_CH4 + refs
 
-    lt = ch1 + moi.LAP_TRINH_CH1_THEM \
-        + [("h1", moi.LAP_TRINH_H1_CH2)] + moi.LAP_TRINH_CH2 \
+    # --- Quyen Lap trinh: ch1 chung; ch2 = phan tin hieu/thuat toan + IDE ---
+    lt_map = {"2.1": "2.1", "2.2": "2.2", "2.4": "2.3", "2.7": "2.4",
+              "2.8": "2.5", "2.9": "2.6", "2.10": "2.7"}
+    lt_own = {"2.1": "2.8", "2.2": "2.9", "2.3": "2.10", "2.4": "2.11",
+              "2.5": "2.12"}
+    lt_ch2 = [("h1", "CHƯƠNG 2. CƠ SỞ LÝ THUYẾT, TỔNG QUAN LINH KIỆN "
+                     "VÀ MÔI TRƯỜNG LẬP TRÌNH")] \
+        + renum(pick(secs, ["2.1", "2.2", "2.4", "2.7", "2.8", "2.9", "2.10"]),
+                lt_map) \
+        + renum(moi.LAP_TRINH_CH2, lt_own)
+    lt = ch1 + moi.LAP_TRINH_CH1_THEM + lt_ch2 \
         + [("h1", moi.LAP_TRINH_H1_CH3)] + moi.LAP_TRINH_CH3 + moi.LAP_TRINH_CH3_CODE \
         + [("h1", moi.LAP_TRINH_H1_CH4)] + moi.LAP_TRINH_CH4 + refs
 

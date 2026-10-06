@@ -30,6 +30,16 @@ thấp qua **opto PC817** • **motor gạt nước 12 V trục vít tự hãm**
 1N4007, LM2596 3,3 V và 7805 5 V • tấm pin **100 W – 4 kg** (bảng tính chọn động
 cơ đã tính lại). ADC chỉ đo điện áp, chưa đo dòng điện.
 
+## Sườn chung của ba quyển mỗi đồ án
+
+Cả ba quyển của mỗi đồ án dùng chung **Chương 1 (tổng quan đề tài)** và một phần
+**Chương 2 (cơ sở lý thuyết)** trích từ báo cáo nghiên cứu; từ Chương 3 mới rẽ
+sang công việc cụ thể của từng quyển:
+
+- Quyển nghiên cứu: Chương 2 đầy đủ (2.1–2.10), Chương 3 mô phỏng hybrid, Chương 4 ma trận tính toán.
+- Quyển chế tạo: Chương 2 = linh kiện 2.1–2.6 + ba phương pháp (2.7) + sơ đồ khối và kết quả tiếp nhận (2.8); Chương 3 = chế tạo mạch/cơ khí/3D, lắp ráp, hiệu chuẩn, đo đạc.
+- Quyển lập trình: Chương 2 = lý thuyết tín hiệu và thuật toán (2.1–2.7) + IDE, module, nhóm lệnh, tham số kế thừa (2.8–2.12); Chương 3 = chế tạo–hiệu chuẩn–đo đạc trong code, phương pháp xử lý, lưu đồ, code mẫu.
+
 ## File đầu ra
 
 | File | Nội dung |
