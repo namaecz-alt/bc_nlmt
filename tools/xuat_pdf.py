@@ -43,6 +43,9 @@ WIDTH_CM = {
     "mach_opto_pc817.png": 15.0, "mach_nguon_lm2596.png": 15.0,
     "mach_7805_lcd_i2c.png": 15.0, "mach_ds1307.png": 14.0,
     "mach_cong_tac_hanh_trinh.png": 15.5,
+    "toan_canh_truoc.png": 13.5, "toan_canh_sau.png": 13.5, "nhin_ben.png": 10.5,
+    "dong_co_gat_nuoc.png": 12.5, "thanh_da_mang_pin.png": 12.0,
+    "chan_ba_va_khop_phuong_vi.png": 10.5, "cot_va_go_khap_nghieng.png": 9.0,
 }
 
 
