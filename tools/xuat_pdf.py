@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Xuat 1 file PDF gop ca 6 phan bao cao (dung khi khong co MS Word).
 
-Nguon noi dung giong het ban Word: tools/noi_dung_1_truc.py va noi_dung_2_truc.py.
+Nguon noi dung giong het ban Word: tools/trich_xuat.py + noi_dung_moi_*.py.
 Font DejaVu Serif (di kem matplotlib) ho tro day du tieng Viet.
 Chay:  python3 tools/xuat_pdf.py
 """
@@ -16,8 +16,8 @@ from reportlab.lib.units import cm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import (BaseDocTemplate, Frame, Image, PageBreak,
-                                PageTemplate, Paragraph, Spacer, Table,
-                                TableStyle)
+                                PageTemplate, Paragraph, Preformatted, Spacer,
+                                Table, TableStyle)
 
 import matplotlib
 
@@ -34,7 +34,8 @@ WIDTH_CM = {
     "so_do_ket_noi_1_truc.png": 16.0, "so_do_ket_noi_2_truc.png": 16.0,
     "mo_hinh_co_khi_1_truc.png": 15.0, "mo_hinh_co_khi_2_truc.png": 15.0,
     "bo_tri_4_ldr.png": 15.5, "so_do_khoi_chuong_trinh.png": 16.0,
-    "luu_do_thuat_toan_1_truc.png": 11.5, "Luu_do_thuat_toan_bam_nang_4_LDR.png": 12.0,
+    "luu_do_ma_tran_1_truc.png": 11.0, "luu_do_ma_tran_2_truc.png": 11.0,
+    "ket_qua_mo_phong_1_truc.png": 16.0,
 }
 
 
@@ -74,7 +75,9 @@ def make_styles():
     S["cover"] = ParagraphStyle("cover", fontName="Ser-B", fontSize=16, leading=22,
                                 alignment=TA_CENTER, spaceAfter=10)
     S["cover2"] = ParagraphStyle("cover2", fontName="Ser", fontSize=12, leading=17,
-                                 alignment=TA_CENTER, spaceAfter=6)
+                                alignment=TA_CENTER, spaceAfter=6)
+    S["code"] = ParagraphStyle("code", fontName="Courier", fontSize=7.2, leading=9.0,
+                               leftIndent=0.4 * cm, spaceBefore=0, spaceAfter=0)
 
 
 def esc(t):
@@ -86,8 +89,10 @@ def col_widths(n, avail):
         fr = [0.30, 0.70]
     elif n == 3:
         fr = [0.30, 0.35, 0.35]
+    elif n == 4:
+        fr = [0.07, 0.28, 0.52, 0.13]
     else:
-        fr = [0.07, 0.30, 0.50, 0.13]
+        fr = [1.0 / n] * n
     return [avail * f for f in fr[:n]]
 
 
@@ -96,25 +101,27 @@ def build_story():
     story.append(Spacer(1, 4 * cm))
     story.append(Paragraph("BÁO CÁO ĐỒ ÁN – HỆ THỐNG BÁM NẮNG MẶT TRỜI", S["cover"]))
     story.append(Paragraph("Bản tổng hợp 6 quyển (mỗi báo cáo chia 3 quyển: "
-                           "Nghiên cứu – Chế tạo – Lập trình), đánh số theo CHƯƠNG", S["cover2"]))
+                           "Nghiên cứu – Chế tạo – Lập trình), đánh số theo CHƯƠNG. "
+                           "Cả hai mô hình dùng ESP32, ma trận 4 LDR suy ra góc quay "
+                           "và động cơ gạt nước trục vít.", S["cover2"]))
     story.append(Spacer(1, 1.2 * cm))
-    for t in ["Quyển 1. Nghiên cứu – mô hình một trục (ESP32): Chương 1–3",
+    for t in ["Quyển 1. Nghiên cứu – mô hình một trục (ESP32): Chương 1–4",
               "Quyển 2. Chế tạo mô hình một trục: Chương 1–4",
               "Quyển 3. Lập trình mô hình một trục: Chương 1–4",
-              "Quyển 4. Nghiên cứu – mô hình hai trục (Arduino Mega): Chương 1–3",
+              "Quyển 4. Nghiên cứu – mô hình hai trục (ESP32): Chương 1–4",
               "Quyển 5. Chế tạo mô hình hai trục: Chương 1–4",
               "Quyển 6. Lập trình mô hình hai trục: Chương 1–4"]:
         story.append(Paragraph("•  " + t, ParagraphStyle("li", parent=S["cover2"],
                                                          alignment=0,
                                                          leftIndent=3 * cm)))
     story.append(Spacer(1, 2 * cm))
-    story.append(Paragraph("Mỗi phần có mục “Tiến độ thực hiện và kế hoạch tuần tới” "
-                           "(12/10 – 18/10/2026).", S["cover2"]))
+    story.append(Paragraph("Mỗi quyển có mục tiến độ: kết quả đạt được trong tuần "
+                           "5/10 – 10/10/2026 và các công việc còn lại của tuần này.", S["cover2"]))
 
     avail = A4[0] - 5.0 * cm
-    for spec, _r in trich_xuat.all_specs().values():
+    for spec, _r in trich_xuat.all_specs():
         story.append(PageBreak())
-        for block in spec:
+        for block in spec["blocks"]:
             kind = block[0]
             if kind == "h1":
                 story.append(Paragraph(esc(block[1]), S["h1"]))
@@ -128,6 +135,9 @@ def build_story():
                 story.append(Paragraph(esc(block[1]), S["bullet"], bulletText="–"))
             elif kind == "eq":
                 story.append(Paragraph(esc(block[1]), S["eq"]))
+            elif kind == "code":
+                for ln in block[1].splitlines():
+                    story.append(Preformatted(ln if ln else " ", S["code"]))
             elif kind == "img":
                 path = block[1]
                 full = path if os.path.isabs(path) else os.path.join(ROOT, path)

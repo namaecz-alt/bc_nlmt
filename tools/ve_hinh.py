@@ -1,10 +1,7 @@
 # -*- coding: utf-8 -*-
-"""Vẽ các sơ đồ / hình minh họa cho báo cáo đồ án bám nắng.
+"""Ve so do / hinh minh hoa cho bao cao (ban dung ESP32 + dong co gat mua).
 
-Phong cách đồng bộ với lưu đồ có sẵn (Luu_do_thuat_toan_bam_nang_4_LDR.png):
-nền xanh nhạt, ô chữ nhật xanh nhạt/trắng, hình thoi vàng nhạt, oval xanh lá,
-đường viền và chữ màu xanh đậm.
-Chạy:  python3 tools/ve_hinh.py
+Chay:  python3 tools/ve_hinh.py
 """
 import math
 import os
@@ -28,10 +25,8 @@ OUT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 
 
 
 def _wrap(t, w=34):
-    out = []
-    for ln in t.split("\n"):
-        out.append("\n".join(textwrap.wrap(ln, w)) if ln.strip() else "")
-    return "\n".join(out)
+    return "\n".join("\n".join(textwrap.wrap(ln, w)) if ln.strip() else ""
+                     for ln in t.split("\n"))
 
 
 def new_fig(w, h, xlim, ylim):
@@ -78,8 +73,7 @@ def line(ax, x1, y1, x2, y2, lw=1.8):
 
 
 def title(ax, x, y, text, fs=13):
-    ax.text(x, y, text, ha="center", va="center", color=TXT,
-            fontsize=fs, fontweight="bold")
+    ax.text(x, y, text, ha="center", va="center", color=TXT, fontsize=fs, fontweight="bold")
 
 
 def note(ax, x, y, text, fs=8.5, ha="center"):
@@ -94,7 +88,7 @@ def save(fig, name):
     print("đã vẽ:", p)
 
 
-# ------------------------------------------------------------------ 1) bố trí 4 LDR
+# ------------------------------------------------------------------ bo tri 4 LDR
 def ve_bo_tri_ldr():
     fig, (a1, a2) = plt.subplots(1, 2, figsize=(11, 5.2), dpi=200,
                                  gridspec_kw={"width_ratios": [1.15, 1]})
@@ -136,103 +130,101 @@ def ve_bo_tri_ldr():
     th = [50 + 14 * math.cos(math.radians(t)) for t in range(52, 91)]
     th_y = [20 + 14 * math.sin(math.radians(t)) for t in range(52, 91)]
     a2.plot(th, th_y, color=EDGE, lw=1.4)
-    a2.text(63, 38, "β_s", ha="center", va="center", color=TXT, fontsize=10,
-            fontweight="bold")
+    a2.text(63, 38, "β_s", ha="center", va="center", color=TXT, fontsize=10, fontweight="bold")
     a2.text(50, -4, "Mặt cắt: góc gá β_s giữa pháp tuyến và trục cảm quang",
             ha="center", va="center", color=TXT, fontsize=9)
     fig.tight_layout()
     save(fig, "bo_tri_4_ldr.png")
 
 
-# ------------------------------------------------------------------ 2) sơ đồ khối hệ thống
+# ------------------------------------------------------------------ so do khoi
 def ve_so_do_khoi(axis="mot"):
-    fig, ax = new_fig(11, 6.4, (0, 110), (0, 70))
+    fig, ax = new_fig(11, 6.6, (0, 110), (0, 72))
     if axis == "mot":
-        ctrl = "ESP32\nlọc – thuật toán lai – ghi dữ liệu"
-        act = "Cơ cấu chấp hành 1 trục\n(servo mô-men cao / actuator)"
-        mid = "Lọc, bù sai khác,\ntính S, e_quay, e_nghiêng"
-        aux = "BH1750 tham chiếu\n(I²C)"
+        act = "Motor gạt nước trục vít\n(tự giữ khi mất điện)\n+ hồi tiếp biến trở"
+        mid = "Ma trận 4 LDR:\ntính S, e_quay →\nΔ_quay = atan(e/tan β_s)"
+        fb = "Biến trở xoay hồi tiếp\ngóc trục"
     else:
-        ctrl = "Arduino Mega\nquy đổi R, so sánh 4 LDR"
-        act = "Servo phương vị +\nmotor nghiêng (cầu H, encoder)"
-        mid = "Lọc, quy đổi R_LDR,\ne_nghiêng, e_quay"
-        aux = "Công tắc hành trình\n4 đầu (2 trục)"
-    box(ax, 14, 58, 22, 10, "Cụm 4 LDR\n(4 góc tấm pin)", "io")
-    box(ax, 14, 44, 22, 9, "Cầu phân áp + lọc nhiễu", "proc", fs=8.4, wrap=24)
-    box(ax, 14, 30, 22, 9, aux, "io", fs=8.4, wrap=24)
-    box(ax, 14, 16, 22, 9, "RTC DS3231\n(I²C)", "io", fs=8.6)
-    box(ax, 50, 52, 26, 10, mid, "proc", fs=8.6)
-    box(ax, 50, 32, 26, 12, ctrl, "proc", fs=9.2, wrap=26)
-    box(ax, 50, 13, 26, 9, "Khối đo U, I của pin và\nđiện năng cơ cấu", "io", fs=8.4, wrap=26)
-    box(ax, 88, 42, 18, 13, act, "proc", fs=8.4, wrap=20)
-    box(ax, 88, 20, 18, 10, "Tấm pin\nmặt trời", "term", fs=9.5, wrap=16)
-    arrow(ax, 14, 53, 14, 48.5)
-    arrow(ax, 25, 44, 37, 49, rad=-0.2)
-    arrow(ax, 25, 30, 37, 32, rad=0.12)
-    arrow(ax, 25, 16, 37, 28, rad=0.2)
-    arrow(ax, 50, 47, 50, 38)
-    arrow(ax, 63, 32, 79, 39, rad=-0.2)
-    arrow(ax, 88, 35.5, 88, 25)
-    arrow(ax, 79, 18, 63, 14, rad=-0.2)
-    line(ax, 88, 48.5, 88, 60)
-    line(ax, 88, 60, 50, 60)
-    arrow(ax, 50, 60, 50, 57)
-    note(ax, 70, 63, "Phản hồi góc / trạng thái giới hạn")
-    title(ax, 55, 67.5, "SƠ ĐỒ KHỐI HỆ THỐNG BÁM NẮNG %s TRỤC" % ("MỘT" if axis == "mot" else "HAI"))
+        act = "2 motor gạt nước trục vít\n(phương vị + nghiêng)\n+ 2 biến trở hồi tiếp"
+        mid = "Ma trận 4 LDR:\ne_quay, e_nghiêng →\nΔ_quay, Δ_nghiêng"
+        fb = "2 biến trở hồi tiếp\ngóc hai trục"
+    box(ax, 14, 60, 22, 10, "Cụm 4 LDR\n(4 góc tấm pin)", "io")
+    box(ax, 14, 46, 22, 9, "Mạch chia áp\n(sinh viên tự chế)", "proc", fs=8.4, wrap=22)
+    box(ax, 14, 32, 22, 9, "ADS1115 đo U, I\n(I²C, 16 bit)", "io", fs=8.6)
+    box(ax, 14, 18, 22, 9, "RTC DS3231\n(I²C, ghi nhãn log)", "io", fs=8.4, wrap=22)
+    box(ax, 50, 52, 27, 12, mid, "proc", fs=8.6)
+    box(ax, 50, 32, 27, 12, "ESP32\nADC 12 bit, lọc trung vị,\ntính góc đích, liên động", "proc", fs=9.0, wrap=26)
+    box(ax, 50, 13, 27, 9, "Ghi log Serial:\n4 kênh, e, Δ, góc đích, U–I", "io", fs=8.4, wrap=26)
+    box(ax, 88, 46, 18, 14, act, "proc", fs=8.2, wrap=20)
+    box(ax, 88, 22, 18, 10, "Tấm pin\nmặt trời", "term", fs=9.5, wrap=16)
+    box(ax, 88, 64, 18, 8, fb, "io", fs=8.0, wrap=20)
+    arrow(ax, 14, 55, 14, 50.5)
+    arrow(ax, 25, 46, 36.5, 50, rad=-0.2)
+    arrow(ax, 25, 32, 36.5, 33, rad=0.1)
+    arrow(ax, 25, 18, 36.5, 29, rad=0.2)
+    arrow(ax, 50, 46, 50, 38)
+    arrow(ax, 63.5, 32, 79, 42, rad=-0.2)
+    arrow(ax, 88, 39, 88, 27)
+    arrow(ax, 88, 60, 88, 53)
+    arrow(ax, 79, 64, 63.5, 56, rad=-0.2)
+    arrow(ax, 79, 20, 63.5, 15, rad=-0.2)
+    note(ax, 71, 68, "Hồi tiếp góc thực tế")
+    note(ax, 71, 24, "Trục vít tự hãm: giữ nguyên vị trí khi dừng/mất điện")
+    title(ax, 55, 70.5, "SƠ ĐỒ KHỐI HỆ THỐNG BÁM NẮNG %s TRỤC (ESP32)" % ("MỘT" if axis == "mot" else "HAI"))
     save(fig, "so_do_khoi_%s_truc.png" % ("1" if axis == "mot" else "2"))
 
 
-# ------------------------------------------------------------------ 3) sơ đồ kết nối
+# ------------------------------------------------------------------ so do ket noi ESP32
 def ve_ket_noi(axis="mot"):
-    fig, ax = new_fig(11.5, 6.6, (0, 115), (0, 72))
+    fig, ax = new_fig(11.5, 6.8, (0, 115), (0, 74))
     if axis == "mot":
-        ten = "ESP32 DEV KIT"
-        left = [("Cụm 4 LDR (cầu phân áp)", "GPIO36/39/34/35 (ADC1)"),
-                ("BH1750 đo sáng tham chiếu", "GPIO21 (SDA) – GPIO22 (SCL)"),
+        left = [("Cụm 4 LDR (ma trận 4 góc)", "GPIO36/39/34/35 (ADC1)"),
+                ("Biến trở hồi tiếp góc trục", "GPIO32 (ADC1_CH4)"),
+                ("ADS1115 đo U, I pin", "GPIO21 (SDA) – GPIO22 (SCL)"),
                 ("RTC DS3231", "GPIO21 (SDA) – GPIO22 (SCL)"),
-                ("Cầu chia áp đo U pin", "GPIO32 (ADC1_CH4)"),
-                ("Cảm biến dòng ACS712", "GPIO33 (ADC1_CH5)")]
-        right = [("Driver / servo 1 trục (PWM)", "GPIO26 (LEDC_PWM)"),
-                 ("Công tắc hành trình ĐÔNG", "GPIO4 (INPUT_PULLUP)"),
-                 ("Công tắc hành trình TÂY", "GPIO5 (INPUT_PULLUP)"),
+                ("Công tắc hành trình Đ/T", "GPIO4 – GPIO5 (pull-up)")]
+        right = [("Relay/cầu H motor gạt nước", "GPIO26 (chiều A) – GPIO27 (B)"),
                  ("Nút dừng khẩn cấp", "GPIO18 (INPUT_PULLUP)"),
-                 ("Serial Monitor / ghi log", "USB-UART (GPIO1/3)")]
+                 ("Đèn báo trạng thái", "GPIO2 (OUTPUT)"),
+                 ("Serial Monitor / ghi log", "USB-UART (GPIO1/3)"),
+                 ("Nguồn logic 5 V / tải 12 V", "Tách khối, chung mass")]
     else:
-        ten = "ARDUINO MEGA 2560"
-        left = [("Cụm 4 LDR (cầu phân áp)", "A0 – A1 – A2 – A3"),
-                ("RTC DS3231", "20 (SDA) – 21 (SCL)"),
-                ("Encoder motor nghiêng", "2 (INT0) – 3 (INT1)"),
-                ("Cầu chia áp đo U pin", "A6"),
-                ("Cảm biến dòng ACS712", "A7")]
-        right = [("Servo phương vị", "12 (thư viện Servo)"),
-                 ("Cầu H: chân PWM", "10 (PWM)"),
-                 ("Cầu H: chiều quay A/B", "22 – 23"),
-                 ("Công tắc hành trình 4 đầu", "26 – 27 – 28 – 29"),
-                 ("Serial Monitor / ghi log", "USB (Serial0)")]
-    box(ax, 57, 36, 34, 44, "", "proc")
-    ax.text(57, 55, ten, ha="center", va="center", color=TXT, fontsize=11.5, fontweight="bold")
-    ax.text(57, 50.8, "Vi điều khiển trung tâm", ha="center", va="center", color=ACC, fontsize=8.5)
-    y0 = 45
+        left = [("Cụm 4 LDR (ma trận 4 góc)", "GPIO36/39/34/35 (ADC1)"),
+                ("Biến trở hồi tiếp phương vị", "GPIO32 (ADC1_CH4)"),
+                ("Biến trở hồi tiếp nghiêng", "GPIO33 (ADC1_CH5)"),
+                ("ADS1115 đo U, I pin", "GPIO21 (SDA) – GPIO22 (SCL)"),
+                ("RTC DS3231", "GPIO21 (SDA) – GPIO22 (SCL)")]
+        right = [("Relay/cầu H motor phương vị", "GPIO26 – GPIO27"),
+                 ("Relay/cầu H motor nghiêng", "GPIO14 – GPIO13"),
+                 ("Công tắc hành trình 4 đầu", "GPIO4 – 5 – 18 – 19"),
+                 ("Nút dừng khẩn cấp", "GPIO25 (INPUT_PULLUP)"),
+                 ("Serial Monitor / ghi log", "USB-UART (GPIO1/3)")]
+    box(ax, 57, 37, 34, 46, "", "proc")
+    ax.text(57, 57, "ESP32 DEV KIT", ha="center", va="center", color=TXT,
+            fontsize=11.5, fontweight="bold")
+    ax.text(57, 52.8, "Vi điều khiển duy nhất của mạch", ha="center", va="center",
+            color=ACC, fontsize=8.5)
+    y0 = 46.5
     for i, (name, pin) in enumerate(left):
-        y = y0 - i * 7.4
+        y = y0 - i * 7.6
         box(ax, 15, y, 26, 6, name, "io", fs=8.2, wrap=28)
         line(ax, 28, y, 40, y)
         ax.add_patch(Circle((40, y), 0.7, fc=EDGE, ec=EDGE))
         ax.text(56.4, y, pin, ha="right", va="center", color=TXT, fontsize=7.2)
     for i, (name, pin) in enumerate(right):
-        y = y0 - i * 7.4
+        y = y0 - i * 7.6
         box(ax, 98, y, 28, 6, name, "io", fs=8.2, wrap=28)
         line(ax, 74, y, 84, y)
         ax.add_patch(Circle((74, y), 0.7, fc=EDGE, ec=EDGE))
         ax.text(57.6, y, pin, ha="left", va="center", color=TXT, fontsize=7.2)
-    title(ax, 57, 66, "SƠ ĐỒ KẾT NỐI CẢM BIẾN – CƠ CẤU (%s)" % ten)
-    note(ax, 57, 3, "Bảng chân mang tính đề xuất; chốt lại sau khi đối chiếu sơ đồ mạch và tài liệu bo mạch.")
+    title(ax, 57, 68, "SƠ ĐỒ KẾT NỐI ESP32 – HỆ %s TRỤC" % ("MỘT" if axis == "mot" else "HAI"))
+    note(ax, 57, 3, "Không dùng bo Arduino trong mạch; mạch chia áp LDR do sinh viên tự chế và hiệu chuẩn.")
     save(fig, "so_do_ket_noi_%s_truc.png" % ("1" if axis == "mot" else "2"))
 
 
-# ------------------------------------------------------------------ 4) mô hình cơ khí
+# ------------------------------------------------------------------ mo hinh co khi
 def ve_co_khi(axis="mot"):
-    fig, ax = new_fig(11, 6.2, (0, 110), (0, 66))
+    fig, ax = new_fig(11, 6.4, (0, 110), (0, 68))
     if axis == "mot":
         line(ax, 6, 8, 104, 8, 2.6)
         for x in range(8, 104, 6):
@@ -253,8 +245,9 @@ def ve_co_khi(axis="mot"):
         ax.text(cx, 49, "Tấm pin quay quanh trục ngang Bắc – Nam", ha="center",
                 va="center", color=TXT, fontsize=9.5, fontweight="bold")
         line(ax, 58, 31, 64, 16, 2.2)
-        ax.add_patch(Rectangle((58, 10), 12, 6, fc=BLUE, ec=EDGE, lw=1.8))
-        ax.text(64, 3.6, "Actuator / servo", ha="center", va="center", color=TXT, fontsize=8.5)
+        ax.add_patch(Rectangle((58, 10), 14, 6, fc=BLUE, ec=EDGE, lw=1.8))
+        ax.text(65, 3.6, "Motor gạt nước ô tô (trục vít tự hãm)", ha="center",
+                va="center", color=TXT, fontsize=8.3)
         ax.add_patch(Rectangle((12, 12), 5, 8, fc=GREEN, ec=EDGE, lw=1.6))
         ax.add_patch(Rectangle((93, 12), 5, 8, fc=GREEN, ec=EDGE, lw=1.6))
         ax.text(14.5, 23, "CTHT ĐÔNG", ha="center", va="center", color=TXT, fontsize=8)
@@ -265,15 +258,18 @@ def ve_co_khi(axis="mot"):
         ax.annotate("", xy=(86, 47), xytext=(70, 53),
                     arrowprops=dict(arrowstyle="-|>", color=ACC, lw=2,
                                     connectionstyle="arc3,rad=-0.35"))
-        ax.text(55, 59, "Quay Đông – Tây trong mặt phẳng vuông góc trục",
+        ax.text(55, 60, "Quay Đông – Tây theo góc suy ra từ ma trận LDR",
                 ha="center", va="center", color=ACC, fontsize=9.5, fontweight="bold")
         ax.text(33, 22, "Gối đỡ", ha="center", va="center", color=TXT, fontsize=8)
+        ax.text(88, 16, "Biến trở hồi tiếp", ha="center", va="center", color=TXT, fontsize=8)
+        ax.add_patch(Rectangle((84, 10), 8, 4, fc=WHITE, ec=EDGE, lw=1.4))
     else:
         line(ax, 6, 6, 104, 6, 2.6)
         for x in range(8, 104, 6):
             line(ax, x, 6, x - 2.4, 3, 1.0)
         ax.add_patch(Rectangle((44, 6), 22, 8, fc=BLUE, ec=EDGE, lw=1.8))
-        ax.text(55, 10, "Đế + servo phương vị", ha="center", va="center", color=TXT, fontsize=8.5)
+        ax.text(55, 10, "Đế + motor gạt nước phương vị", ha="center", va="center",
+                color=TXT, fontsize=8.3)
         ax.add_patch(Rectangle((52, 14), 6, 16, fc=BLUE, ec=EDGE, lw=1.8))
         ax.add_patch(Circle((55, 32), 3.4, fc=WHITE, ec=EDGE, lw=1.8))
         ang = math.radians(22)
@@ -287,9 +283,9 @@ def ve_co_khi(axis="mot"):
         line(ax, 55, 34, 51, 39.5, 2.0)
         ax.text(60, 58, "Tấm pin (nghiêng + xoay)", ha="center", va="center",
                 color=TXT, fontsize=9.5, fontweight="bold")
-        ax.add_patch(Rectangle((74, 22.5), 12, 7, fc=BLUE, ec=EDGE, lw=1.8))
+        ax.add_patch(Rectangle((74, 22.5), 14, 7, fc=BLUE, ec=EDGE, lw=1.8))
         line(ax, 80, 29.5, 70, 46, 2.0)
-        ax.text(78, 18.5, "Motor nghiêng + encoder", ha="center", va="center", color=TXT, fontsize=8)
+        ax.text(79, 18.5, "Motor gạt nước nghiêng", ha="center", va="center", color=TXT, fontsize=8)
         ax.annotate("", xy=(30, 52), xytext=(44, 56),
                     arrowprops=dict(arrowstyle="-|>", color=ACC, lw=2,
                                     connectionstyle="arc3,rad=0.35"))
@@ -304,85 +300,92 @@ def ve_co_khi(axis="mot"):
         ax.add_patch(Rectangle((93, 10), 5, 7, fc=GREEN, ec=EDGE, lw=1.6))
         ax.text(18.5, 20, "CTHT\nphương vị", ha="center", va="center", color=TXT, fontsize=7.6)
         ax.text(95.5, 20, "CTHT\nnghiêng", ha="center", va="center", color=TXT, fontsize=7.6)
-    title(ax, 55, 63, "MÔ HÌNH CƠ KHÍ ĐỀ XUẤT – HỆ %s TRỤC" % ("MỘT" if axis == "mot" else "HAI"))
+        ax.text(30, 12, "2 biến trở hồi tiếp góc", ha="center", va="center", color=TXT, fontsize=8)
+    title(ax, 55, 65, "MÔ HÌNH CƠ KHÍ HỆ %s TRỤC – ĐỘNG CƠ GẠT NƯỚC TRỤC VÍT" % ("MỘT" if axis == "mot" else "HAI"))
     save(fig, "mo_hinh_co_khi_%s_truc.png" % ("1" if axis == "mot" else "2"))
 
 
-# ------------------------------------------------------------------ 5) sơ đồ khối chương trình
+# ------------------------------------------------------------------ khoi chuong trinh
 def ve_khoi_chuong_trinh():
-    fig, ax = new_fig(11.5, 4.8, (0, 115), (0, 46))
-    steps = [("Đọc 4 kênh ADC\n(LDR)", 12), ("Loại mẫu đột biến,\nlọc thông thấp", 30),
-             ("Bù offset/độ lợi;\ntính S, e_quay,\ne_nghiêng", 49),
-             ("Đánh giá chất\nlượng ánh sáng", 68), ("Chọn trục và\nluật phát lệnh", 87),
-             ("Giới hạn góc,\nliên động CTHT", 104)]
+    fig, ax = new_fig(11.5, 5.0, (0, 115), (0, 48))
+    steps = [("Đọc 4 kênh ADC\n(64 mẫu, trung vị)", 12),
+             ("Ma trận LDR:\nS, e_quay, e_nghiêng", 30),
+             ("Δ = atan(e/tan β_s)\nsuy ra góc cần quay", 49),
+             ("|Δ| > ngưỡng δ?\nso sánh giá trị", 68),
+             ("Đọc biến trở →\nθ đích = θ + Δ", 87),
+             ("Chạy motor tới\nθ đích, liên động", 104)]
     for t, x in steps:
-        box(ax, x, 30, 15.5, 14, t, "proc", fs=8.2, wrap=16)
+        box(ax, x, 31, 15.5, 14, t, "proc", fs=8.2, wrap=17)
     for i in range(len(steps) - 1):
-        arrow(ax, steps[i][1] + 7.8, 30, steps[i + 1][1] - 7.8, 30)
-    box(ax, 62, 11, 30, 8, "Ghi log / Serial: tín hiệu, góc đặt, trạng thái, U–I", "io", fs=8.4, wrap=40)
-    arrow(ax, 104, 23, 104, 11)
-    line(ax, 104, 11, 77, 11)
-    arrow(ax, 87, 23, 87, 15)
-    line(ax, 12, 11, 12, 23)
-    line(ax, 12, 11, 47, 11)
-    note(ax, 26, 6, "Vòng lặp chu kỳ T_mẫu")
-    title(ax, 57, 42, "SƠ ĐỒ KHỐI CHỨC NĂNG CỦA CHƯƠNG TRÌNH ĐIỀU KHIỂN")
+        arrow(ax, steps[i][1] + 7.8, 31, steps[i + 1][1] - 7.8, 31)
+    box(ax, 62, 12, 30, 8, "Ghi log Serial: 4 kênh, e, Δ, θ đích, U–I", "io", fs=8.4, wrap=40)
+    arrow(ax, 104, 24, 104, 12)
+    line(ax, 104, 12, 77, 12)
+    arrow(ax, 87, 24, 87, 16)
+    line(ax, 12, 12, 12, 24)
+    line(ax, 12, 12, 47, 12)
+    note(ax, 26, 6, "Vòng lặp chu kỳ T_mẫu; motor trục vít tự giữ khi dừng")
+    note(ax, 68, 41, "KHÔNG: chờ chu kỳ sau, không quay theo thời gian")
+    title(ax, 57, 45, "SƠ ĐỒ KHỐI CHƯƠNG TRÌNH ĐỌC MA TRẬN LDR VÀ SUY RA GÓC QUAY")
     save(fig, "so_do_khoi_chuong_trinh.png")
 
 
-# ------------------------------------------------------------------ 6) lưu đồ 1 trục (thuật toán lai)
-def ve_luu_do_1_truc():
-    fig, ax = new_fig(10.5, 12.5, (0, 104), (0, 142))
-    title(ax, 50, 138, "LƯU ĐỒ THUẬT TOÁN LAI THIÊN VĂN – CẢM BIẾN (1 TRỤC)", 13)
-    box(ax, 40, 130, 26, 7, "BẮT ĐẦU", "start", 10, bold=True)
-    box(ax, 40, 118, 46, 10,
-        "Khởi tạo ESP32, ADC, RTC, PWM; nạp tham số: vùng chết δ, giới hạn góc, hệ số K_a, chu kỳ.",
-        "proc", 8.6)
-    box(ax, 40, 103, 46, 9,
-        "Đọc RTC; tính góc tham chiếu thiên văn R* theo ngày, giờ, vĩ độ – kinh độ.",
+# ------------------------------------------------------------------ luu do ma tran
+def ve_luu_do_ma_tran(axis="mot"):
+    fig, ax = new_fig(10.5, 12.8, (0, 104), (0, 146))
+    ten = "MỘT TRỤC" if axis == "mot" else "HAI TRỤC"
+    title(ax, 50, 142, "LƯU ĐỒ PHƯƠNG PHÁP MA TRẬN 4 LDR SUY RA GÓC QUAY (%s)" % ten, 12.5)
+    box(ax, 40, 134, 26, 7, "BẮT ĐẦU", "start", 10, bold=True)
+    box(ax, 40, 122, 46, 10,
+        "Khởi tạo ESP32: ADC 12 bit + attenuation, chân relay, I²C; nạp β_s, ngưỡng δ, giới hạn góc, hệ số hiệu chuẩn 4 kênh.",
+        "proc", 8.5)
+    box(ax, 40, 107, 46, 10,
+        "Đọc 4 kênh LDR: 64 mẫu/kênh, lấy trung vị rồi trung bình; đọc ADS1115 (U, I) và RTC.",
         "io", 8.6)
-    box(ax, 40, 88, 46, 10,
-        "Đọc 4 LDR; lọc mẫu; tính S, e_quay, e_nghiêng, e_chéo.", "io", 8.6)
-    box(ax, 40, 70, 46, 13,
-        "TÍN HIỆU ĐỦ TIN CẬY?\nS trong dải làm việc, biến động thấp,\nkhông bão hòa, e_chéo hợp lý",
-        "dec", 8.3, wrap=40)
-    box(ax, 40, 53, 46, 11,
-        "e_a = e_quay (trục được lắp);\nf = sign(e_a)·(|e_a| − δ) ngoài vùng chết;\nθ* = sat(R* + K_a·f, θ_min, θ_max)",
-        "proc", 8.2, wrap=40)
-    box(ax, 82, 53, 28, 10,
-        "Chế độ thiên văn: θ* = R* (giới hạn trong hành trình), không dùng hiệu chỉnh LDR.",
-        "proc", 8.3, wrap=24)
-    box(ax, 40, 34, 40, 10,
-        "KIỂM TRA GIỚI HẠN?\nCông tắc hành trình không chặn\nhướng đang lệnh", "dec", 8.3, wrap=34)
-    box(ax, 82, 26, 28, 10,
-        "Chặn lệnh hướng đang bị chặn; chỉ cho phép quay ngược để thoát.", "proc", 8.4, wrap=24)
-    box(ax, 40, 19, 40, 8,
-        "Phát lệnh PWM/servo; ghi log S, e, góc đặt, trạng thái.", "proc", 8.5)
-    box(ax, 40, 7, 40, 7, "Chờ hết chu kỳ T_mẫu rồi lặp lại.", "io", 8.6)
-    arrow(ax, 40, 126.5, 40, 123)
-    arrow(ax, 40, 113, 40, 107.5)
-    arrow(ax, 40, 98.5, 40, 93)
-    arrow(ax, 40, 83, 40, 76.5)
-    arrow(ax, 40, 63.5, 40, 58.5, label="CÓ", lx=45, ly=61)
-    arrow(ax, 63, 70, 69, 58, label="KHÔNG", lx=70, ly=66)
-    # hai chế độ gộp lại trước khi kiểm tra giới hạn
-    arrow(ax, 40, 47.5, 40, 44.6)
-    line(ax, 82, 48, 82, 44)
-    line(ax, 82, 44, 40, 44)
-    arrow(ax, 40, 44, 40, 39.2)
-    arrow(ax, 40, 29, 40, 23, label="CÓ", lx=45, ly=26)
-    arrow(ax, 60, 34, 69, 29, label="KHÔNG", lx=68, ly=33)
-    arrow(ax, 40, 15, 40, 10.5)
-    # nhánh chặn lệnh gom về ô chờ cuối chu kỳ
-    line(ax, 82, 21, 82, 7)
-    line(ax, 82, 7, 60, 7)
-    # rail trái quay về khối đọc LDR
-    line(ax, 20, 7, 6, 7)
-    line(ax, 6, 7, 6, 88)
-    arrow(ax, 6, 88, 17, 88)
-    note(ax, 9, 12, "Lặp lại mỗi chu kỳ", ha="left")
-    note(ax, 96, 70, "Sau mỗi bước:\nđọc lại cảm biến", ha="right")
-    save(fig, "luu_do_thuat_toan_1_truc.png")
+    box(ax, 40, 92, 46, 11,
+        "Lập ma trận: S = tổng 4 kênh; e_quay = (phải − trái)/S; e_nghiêng = (trên − dưới)/S.",
+        "proc", 8.6)
+    box(ax, 40, 74, 46, 12,
+        "TÍN HIỆU DÙNG ĐƯỢC?\nS trong dải, không bão hòa,\nbiến động thấp", "dec", 8.4, wrap=34)
+    box(ax, 82, 92, 28, 10,
+        "Giữ nguyên góc hiện tại (motor trục vít tự giữ); ghi log cảnh báo.", "proc", 8.4, wrap=24)
+    box(ax, 40, 56, 46, 11,
+        "Suy ra góc cần quay:\nΔ_quay = atan(e_quay / tan β_s);\nΔ_nghiêng = atan(e_nghiêng / tan β_s).",
+        "proc", 8.4, wrap=40)
+    box(ax, 40, 39, 40, 9,
+        "|Δ| > NGƯỠNG δ?\n(so sánh với vùng chết)", "dec", 8.4, wrap=30)
+    box(ax, 82, 56, 28, 9,
+        "Chờ hết chu kỳ T_mẫu rồi đọc lại ma trận.", "io", 8.5, wrap=24)
+    box(ax, 40, 24, 40, 9,
+        "Đọc biến trở hồi tiếp: θ_hiện tại;\nθ_đích = sat(θ + Δ, θ_min, θ_max).", "proc", 8.4, wrap=36)
+    box(ax, 40, 10, 40, 9,
+        "KIỂM TRA CÔNG TẮC HÀNH TRÌNH;\nchạy motor đúng chiều đến khi θ = θ_đích thì dừng.",
+        "proc", 8.3, wrap=36)
+    box(ax, 40, -2, 40, 6, "Ghi log; chờ T_mẫu; lặp lại.", "io", 8.5)
+    arrow(ax, 40, 130.5, 40, 127)
+    arrow(ax, 40, 117, 40, 112)
+    arrow(ax, 40, 102, 40, 97.5)
+    arrow(ax, 40, 86.5, 40, 80)
+    arrow(ax, 63, 74, 69, 87, label="KHÔNG", lx=70, ly=82)
+    arrow(ax, 40, 68, 40, 61.5, label="CÓ", lx=45, ly=65)
+    arrow(ax, 40, 50.5, 40, 43.5)
+    arrow(ax, 60, 39, 69, 52, label="KHÔNG", lx=68, ly=47)
+    arrow(ax, 40, 34.5, 40, 28.5, label="CÓ", lx=45, ly=31.5)
+    arrow(ax, 40, 19.5, 40, 14.5)
+    arrow(ax, 40, 5.5, 40, 1)
+    line(ax, 82, 87, 82, 83)
+    line(ax, 82, 83, 99, 83)
+    line(ax, 82, 51.5, 82, 47)
+    line(ax, 82, 47, 99, 47)
+    line(ax, 99, 83, 99, -2)
+    line(ax, 99, -2, 60, -2)
+    line(ax, 20, -2, 6, -2)
+    line(ax, 6, -2, 6, 107)
+    arrow(ax, 6, 107, 17, 107)
+    note(ax, 9, 2, "Lặp lại mỗi chu kỳ", ha="left")
+    if axis == "hai":
+        note(ax, 50, -8, "Trục nghiêng chỉnh trước, đến phiên xoay: lặp lại cùng quy tắc với e_quay.")
+    save(fig, "luu_do_ma_tran_%s_truc.png" % ("1" if axis == "mot" else "2"))
 
 
 if __name__ == "__main__":
@@ -394,4 +397,5 @@ if __name__ == "__main__":
     ve_co_khi("mot")
     ve_co_khi("hai")
     ve_khoi_chuong_trinh()
-    ve_luu_do_1_truc()
+    ve_luu_do_ma_tran("mot")
+    ve_luu_do_ma_tran("hai")
