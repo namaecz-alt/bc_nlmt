@@ -1,323 +1,501 @@
 {
- "phi": 20.93,
- "beta_s": 30.0,
- "gain1": {
-  "21/3": 89.11417981127153,
-  "21/6": 46.94312095941526,
-  "23/9": 91.26810623188506,
-  "21/12": 258.5086356580292
- },
- "gain2": {
-  "21/3": 96.46272777386594,
-  "21/6": 50.443124846833044,
-  "23/9": 99.25176293233196,
-  "21/12": 351.2459235349679
- },
- "matrix": {
-  "21/3": {
-   "6": [
-    -0.1,
-    -89.6
-   ],
-   "7": [
-    13.8,
-    -84.1
-   ],
-   "8": [
-    27.7,
-    -77.9
-   ],
-   "9": [
-    41.1,
-    -69.9
-   ],
-   "10": [
-    53.7,
-    -57.7
-   ],
-   "11": [
-    64.1,
-    -36.4
-   ],
-   "12": [
-    68.7,
-    0.0
-   ],
-   "13": [
-    64.1,
-    36.4
-   ],
-   "14": [
-    53.7,
-    57.7
-   ],
-   "15": [
-    41.1,
-    69.9
-   ],
-   "16": [
-    27.7,
-    77.9
-   ],
-   "17": [
-    13.8,
-    84.1
-   ],
-   "18": [
-    -0.1,
-    89.6
-   ]
+  "latitude_deg": 20.93,
+  "longitude_reference_deg": 106.1,
+  "azimuth_convention": "South=0, West positive; atan2 branch preserved",
+  "daylight_proxy": {
+    "21/3": {
+      "fixed_proxy_index": 7.639333005252869,
+      "one_axis_proxy_index": 11.570842502495356,
+      "two_axis_limited_proxy_index": 11.983333333333508,
+      "gain_one_axis_percent": 51.46404135726441,
+      "gain_two_axis_percent": 56.8636073999349
+    },
+    "21/6": {
+      "fixed_proxy_index": 7.0026476648267515,
+      "one_axis_proxy_index": 12.950532928648132,
+      "two_axis_limited_proxy_index": 13.261897320834112,
+      "gain_one_axis_percent": 84.9376628456793,
+      "gain_two_axis_percent": 89.38404380169851
+    },
+    "23/9": {
+      "fixed_proxy_index": 7.638346829688383,
+      "one_axis_proxy_index": 11.507955895313163,
+      "two_axis_limited_proxy_index": 11.950000000000172,
+      "gain_one_axis_percent": 50.66029537418433,
+      "gain_two_axis_percent": 56.44746522314814
+    },
+    "21/12": {
+      "fixed_proxy_index": 6.915043384353225,
+      "one_axis_proxy_index": 8.48473605555313,
+      "two_axis_limited_proxy_index": 10.716666666666777,
+      "gain_one_axis_percent": 22.69967929270946,
+      "gain_two_axis_percent": 54.976130604119476
+    }
   },
-  "21/6": {
-   "6": [
-    8.2,
-    -112.1
-   ],
-   "7": [
-    21.3,
-    -107.9
-   ],
-   "8": [
-    34.8,
-    -104.7
-   ],
-   "9": [
-    48.4,
-    -102.2
-   ],
-   "10": [
-    62.2,
-    -100.8
-   ],
-   "11": [
-    75.9,
-    -103.1
-   ],
-   "12": [
-    87.5,
-    180.0
-   ],
-   "13": [
-    75.9,
-    103.1
-   ],
-   "14": [
-    62.2,
-    100.8
-   ],
-   "15": [
-    48.4,
-    102.2
-   ],
-   "16": [
-    34.8,
-    104.7
-   ],
-   "17": [
-    21.3,
-    107.9
-   ],
-   "18": [
-    8.2,
-    112.1
-   ]
+  "solar_matrix": {
+    "21/3": {
+      "6": {
+        "alpha_deg": -0.14,
+        "gamma_deg": -89.62
+      },
+      "7": {
+        "alpha_deg": 13.84,
+        "gamma_deg": -84.15
+      },
+      "8": {
+        "alpha_deg": 27.68,
+        "gamma_deg": -77.93
+      },
+      "9": {
+        "alpha_deg": 41.14,
+        "gamma_deg": -69.87
+      },
+      "10": {
+        "alpha_deg": 53.74,
+        "gamma_deg": -57.71
+      },
+      "11": {
+        "alpha_deg": 64.11,
+        "gamma_deg": -36.35
+      },
+      "12": {
+        "alpha_deg": 68.67,
+        "gamma_deg": 0.0
+      },
+      "13": {
+        "alpha_deg": 64.11,
+        "gamma_deg": 36.35
+      },
+      "14": {
+        "alpha_deg": 53.74,
+        "gamma_deg": 57.71
+      },
+      "15": {
+        "alpha_deg": 41.14,
+        "gamma_deg": 69.87
+      },
+      "16": {
+        "alpha_deg": 27.68,
+        "gamma_deg": 77.93
+      },
+      "17": {
+        "alpha_deg": 13.84,
+        "gamma_deg": 84.15
+      },
+      "18": {
+        "alpha_deg": -0.14,
+        "gamma_deg": 89.62
+      }
+    },
+    "21/6": {
+      "6": {
+        "alpha_deg": 8.17,
+        "gamma_deg": -112.06
+      },
+      "7": {
+        "alpha_deg": 21.34,
+        "gamma_deg": -107.94
+      },
+      "8": {
+        "alpha_deg": 34.79,
+        "gamma_deg": -104.66
+      },
+      "9": {
+        "alpha_deg": 48.42,
+        "gamma_deg": -102.17
+      },
+      "10": {
+        "alpha_deg": 62.16,
+        "gamma_deg": -100.84
+      },
+      "11": {
+        "alpha_deg": 75.89,
+        "gamma_deg": -103.07
+      },
+      "12": {
+        "alpha_deg": 87.48,
+        "gamma_deg": 180.0
+      },
+      "13": {
+        "alpha_deg": 75.89,
+        "gamma_deg": 103.07
+      },
+      "14": {
+        "alpha_deg": 62.16,
+        "gamma_deg": 100.84
+      },
+      "15": {
+        "alpha_deg": 48.42,
+        "gamma_deg": 102.17
+      },
+      "16": {
+        "alpha_deg": 34.79,
+        "gamma_deg": 104.66
+      },
+      "17": {
+        "alpha_deg": 21.34,
+        "gamma_deg": 107.94
+      },
+      "18": {
+        "alpha_deg": 8.17,
+        "gamma_deg": 112.06
+      }
+    },
+    "23/9": {
+      "6": {
+        "alpha_deg": -0.36,
+        "gamma_deg": -89.06
+      },
+      "7": {
+        "alpha_deg": 13.62,
+        "gamma_deg": -83.57
+      },
+      "8": {
+        "alpha_deg": 27.43,
+        "gamma_deg": -77.31
+      },
+      "9": {
+        "alpha_deg": 40.85,
+        "gamma_deg": -69.17
+      },
+      "10": {
+        "alpha_deg": 53.37,
+        "gamma_deg": -56.91
+      },
+      "11": {
+        "alpha_deg": 63.61,
+        "gamma_deg": -35.6
+      },
+      "12": {
+        "alpha_deg": 68.06,
+        "gamma_deg": 0.0
+      },
+      "13": {
+        "alpha_deg": 63.61,
+        "gamma_deg": 35.6
+      },
+      "14": {
+        "alpha_deg": 53.37,
+        "gamma_deg": 56.91
+      },
+      "15": {
+        "alpha_deg": 40.85,
+        "gamma_deg": 69.17
+      },
+      "16": {
+        "alpha_deg": 27.43,
+        "gamma_deg": 77.31
+      },
+      "17": {
+        "alpha_deg": 13.62,
+        "gamma_deg": 83.57
+      },
+      "18": {
+        "alpha_deg": -0.36,
+        "gamma_deg": 89.06
+      }
+    },
+    "21/12": {
+      "6": {
+        "alpha_deg": -8.17,
+        "gamma_deg": -67.94
+      },
+      "7": {
+        "alpha_deg": 4.57,
+        "gamma_deg": -62.74
+      },
+      "8": {
+        "alpha_deg": 16.64,
+        "gamma_deg": -56.02
+      },
+      "9": {
+        "alpha_deg": 27.63,
+        "gamma_deg": -47.07
+      },
+      "10": {
+        "alpha_deg": 36.86,
+        "gamma_deg": -34.98
+      },
+      "11": {
+        "alpha_deg": 43.28,
+        "gamma_deg": -19.03
+      },
+      "12": {
+        "alpha_deg": 45.62,
+        "gamma_deg": 0.0
+      },
+      "13": {
+        "alpha_deg": 43.28,
+        "gamma_deg": 19.03
+      },
+      "14": {
+        "alpha_deg": 36.86,
+        "gamma_deg": 34.98
+      },
+      "15": {
+        "alpha_deg": 27.63,
+        "gamma_deg": 47.07
+      },
+      "16": {
+        "alpha_deg": 16.64,
+        "gamma_deg": 56.02
+      },
+      "17": {
+        "alpha_deg": 4.57,
+        "gamma_deg": 62.74
+      },
+      "18": {
+        "alpha_deg": -8.17,
+        "gamma_deg": 67.94
+      }
+    }
   },
-  "23/9": {
-   "6": [
-    -0.4,
-    -89.1
-   ],
-   "7": [
-    13.6,
-    -83.6
-   ],
-   "8": [
-    27.4,
-    -77.3
-   ],
-   "9": [
-    40.8,
-    -69.2
-   ],
-   "10": [
-    53.4,
-    -56.9
-   ],
-   "11": [
-    63.6,
-    -35.6
-   ],
-   "12": [
-    68.1,
-    0.0
-   ],
-   "13": [
-    63.6,
-    35.6
-   ],
-   "14": [
-    53.4,
-    56.9
-   ],
-   "15": [
-    40.8,
-    69.2
-   ],
-   "16": [
-    27.4,
-    77.3
-   ],
-   "17": [
-    13.6,
-    83.6
-   ],
-   "18": [
-    -0.4,
-    89.1
-   ]
+  "two_axis_commands": {
+    "21/3": {
+      "7": {
+        "alpha_deg": 13.84,
+        "beta_cmd_deg": 13.84,
+        "gamma_raw_deg": -84.15,
+        "gamma_cmd_deg": -84.15,
+        "az_state": "track"
+      },
+      "9": {
+        "alpha_deg": 41.14,
+        "beta_cmd_deg": 41.14,
+        "gamma_raw_deg": -69.87,
+        "gamma_cmd_deg": -69.87,
+        "az_state": "track"
+      },
+      "11": {
+        "alpha_deg": 64.11,
+        "beta_cmd_deg": 64.11,
+        "gamma_raw_deg": -36.35,
+        "gamma_cmd_deg": -36.35,
+        "az_state": "track"
+      },
+      "12": {
+        "alpha_deg": 68.67,
+        "beta_cmd_deg": 68.67,
+        "gamma_raw_deg": 0.0,
+        "gamma_cmd_deg": 0.0,
+        "az_state": "track"
+      },
+      "13": {
+        "alpha_deg": 64.11,
+        "beta_cmd_deg": 64.11,
+        "gamma_raw_deg": 36.35,
+        "gamma_cmd_deg": 36.35,
+        "az_state": "track"
+      },
+      "15": {
+        "alpha_deg": 41.14,
+        "beta_cmd_deg": 41.14,
+        "gamma_raw_deg": 69.87,
+        "gamma_cmd_deg": 69.87,
+        "az_state": "track"
+      },
+      "17": {
+        "alpha_deg": 13.84,
+        "beta_cmd_deg": 13.84,
+        "gamma_raw_deg": 84.15,
+        "gamma_cmd_deg": 84.15,
+        "az_state": "track"
+      }
+    },
+    "21/6": {
+      "7": {
+        "alpha_deg": 21.34,
+        "beta_cmd_deg": 21.34,
+        "gamma_raw_deg": -107.94,
+        "gamma_cmd_deg": -107.94,
+        "az_state": "track"
+      },
+      "9": {
+        "alpha_deg": 48.42,
+        "beta_cmd_deg": 48.42,
+        "gamma_raw_deg": -102.17,
+        "gamma_cmd_deg": -102.17,
+        "az_state": "track"
+      },
+      "11": {
+        "alpha_deg": 75.89,
+        "beta_cmd_deg": 75.0,
+        "gamma_raw_deg": -103.07,
+        "gamma_cmd_deg": -103.07,
+        "az_state": "track"
+      },
+      "12": {
+        "alpha_deg": 87.48,
+        "beta_cmd_deg": 75.0,
+        "gamma_raw_deg": 180.0,
+        "gamma_cmd_deg": -103.07,
+        "az_state": "hold-before-boundary"
+      },
+      "13": {
+        "alpha_deg": 75.89,
+        "beta_cmd_deg": 75.0,
+        "gamma_raw_deg": 103.07,
+        "gamma_cmd_deg": -103.07,
+        "az_state": "latched"
+      },
+      "15": {
+        "alpha_deg": 48.42,
+        "beta_cmd_deg": 48.42,
+        "gamma_raw_deg": 102.17,
+        "gamma_cmd_deg": -103.07,
+        "az_state": "latched"
+      },
+      "17": {
+        "alpha_deg": 21.34,
+        "beta_cmd_deg": 21.34,
+        "gamma_raw_deg": 107.94,
+        "gamma_cmd_deg": -103.07,
+        "az_state": "latched"
+      }
+    },
+    "23/9": {
+      "7": {
+        "alpha_deg": 13.62,
+        "beta_cmd_deg": 13.62,
+        "gamma_raw_deg": -83.57,
+        "gamma_cmd_deg": -83.57,
+        "az_state": "track"
+      },
+      "9": {
+        "alpha_deg": 40.85,
+        "beta_cmd_deg": 40.85,
+        "gamma_raw_deg": -69.17,
+        "gamma_cmd_deg": -69.17,
+        "az_state": "track"
+      },
+      "11": {
+        "alpha_deg": 63.61,
+        "beta_cmd_deg": 63.61,
+        "gamma_raw_deg": -35.6,
+        "gamma_cmd_deg": -35.6,
+        "az_state": "track"
+      },
+      "12": {
+        "alpha_deg": 68.06,
+        "beta_cmd_deg": 68.06,
+        "gamma_raw_deg": 0.0,
+        "gamma_cmd_deg": 0.0,
+        "az_state": "track"
+      },
+      "13": {
+        "alpha_deg": 63.61,
+        "beta_cmd_deg": 63.61,
+        "gamma_raw_deg": 35.6,
+        "gamma_cmd_deg": 35.6,
+        "az_state": "track"
+      },
+      "15": {
+        "alpha_deg": 40.85,
+        "beta_cmd_deg": 40.85,
+        "gamma_raw_deg": 69.17,
+        "gamma_cmd_deg": 69.17,
+        "az_state": "track"
+      },
+      "17": {
+        "alpha_deg": 13.62,
+        "beta_cmd_deg": 13.62,
+        "gamma_raw_deg": 83.57,
+        "gamma_cmd_deg": 83.57,
+        "az_state": "track"
+      }
+    },
+    "21/12": {
+      "7": {
+        "alpha_deg": 4.57,
+        "beta_cmd_deg": 4.57,
+        "gamma_raw_deg": -62.74,
+        "gamma_cmd_deg": -62.74,
+        "az_state": "track"
+      },
+      "9": {
+        "alpha_deg": 27.63,
+        "beta_cmd_deg": 27.63,
+        "gamma_raw_deg": -47.07,
+        "gamma_cmd_deg": -47.07,
+        "az_state": "track"
+      },
+      "11": {
+        "alpha_deg": 43.28,
+        "beta_cmd_deg": 43.28,
+        "gamma_raw_deg": -19.03,
+        "gamma_cmd_deg": -19.03,
+        "az_state": "track"
+      },
+      "12": {
+        "alpha_deg": 45.62,
+        "beta_cmd_deg": 45.62,
+        "gamma_raw_deg": 0.0,
+        "gamma_cmd_deg": 0.0,
+        "az_state": "track"
+      },
+      "13": {
+        "alpha_deg": 43.28,
+        "beta_cmd_deg": 43.28,
+        "gamma_raw_deg": 19.03,
+        "gamma_cmd_deg": 19.03,
+        "az_state": "track"
+      },
+      "15": {
+        "alpha_deg": 27.63,
+        "beta_cmd_deg": 27.63,
+        "gamma_raw_deg": 47.07,
+        "gamma_cmd_deg": 47.07,
+        "az_state": "track"
+      },
+      "17": {
+        "alpha_deg": 4.57,
+        "beta_cmd_deg": 4.57,
+        "gamma_raw_deg": 62.74,
+        "gamma_cmd_deg": 62.74,
+        "az_state": "track"
+      }
+    }
   },
-  "21/12": {
-   "6": [
-    -8.2,
-    -67.9
-   ],
-   "7": [
-    4.6,
-    -62.7
-   ],
-   "8": [
-    16.6,
-    -56.0
-   ],
-   "9": [
-    27.6,
-    -47.1
-   ],
-   "10": [
-    36.9,
-    -35.0
-   ],
-   "11": [
-    43.3,
-    -19.0
-   ],
-   "12": [
-    45.6,
-    0.0
-   ],
-   "13": [
-    43.3,
-    19.0
-   ],
-   "14": [
-    36.9,
-    35.0
-   ],
-   "15": [
-    27.6,
-    47.1
-   ],
-   "16": [
-    16.6,
-    56.0
-   ],
-   "17": [
-    4.6,
-    62.7
-   ],
-   "18": [
-    -8.2,
-    67.9
-   ]
+  "controller_model": {
+    "1": {
+      "openloop": {
+        "mean_error_deg": 3.593465949593156,
+        "max_error_deg": 7.777001293588367,
+        "motor_commands": 20,
+        "assumptions": "1-minute time step; synthetic cloud/light/noise; instantaneous actuator; not a hardware test"
+      },
+      "closedloop": {
+        "mean_error_deg": 5.682392274712056,
+        "max_error_deg": 73.73768427458418,
+        "motor_commands": 88,
+        "assumptions": "1-minute time step; synthetic cloud/light/noise; instantaneous actuator; not a hardware test"
+      },
+      "hybrid": {
+        "mean_error_deg": 2.0917013071883117,
+        "max_error_deg": 4.55629228284854,
+        "motor_commands": 61,
+        "assumptions": "1-minute time step; synthetic cloud/light/noise; instantaneous actuator; not a hardware test"
+      }
+    },
+    "2": {
+      "openloop": {
+        "mean_error_deg": 3.559821511386018,
+        "max_error_deg": 7.49981361037516,
+        "motor_commands": 40,
+        "assumptions": "1-minute time step; synthetic cloud/light/noise; instantaneous actuator; not a hardware test"
+      },
+      "closedloop": {
+        "mean_error_deg": 8.343520806801859,
+        "max_error_deg": 81.3640300839964,
+        "motor_commands": 184,
+        "assumptions": "1-minute time step; synthetic cloud/light/noise; instantaneous actuator; not a hardware test"
+      },
+      "hybrid": {
+        "mean_error_deg": 2.3201906902985012,
+        "max_error_deg": 4.999875838921993,
+        "motor_commands": 121,
+        "assumptions": "1-minute time step; synthetic cloud/light/noise; instantaneous actuator; not a hardware test"
+      }
+    }
   }
- },
- "adc_table": [
-  [
-   -20,
-   3100,
-   2074,
-   1026,
-   "Quay sang TRÁI (về phía Đông)"
-  ],
-  [
-   -10,
-   2968,
-   2447,
-   521,
-   "Quay sang TRÁI (về phía Đông)"
-  ],
-  [
-   -5,
-   2869,
-   2607,
-   262,
-   "Quay sang TRÁI (về phía Đông)"
-  ],
-  [
-   0,
-   2748,
-   2748,
-   0,
-   "Dừng (trong vùng chết)"
-  ],
-  [
-   5,
-   2607,
-   2869,
-   -262,
-   "Quay sang PHẢI (về phía Tây)"
-  ],
-  [
-   10,
-   2447,
-   2968,
-   -521,
-   "Quay sang PHẢI (về phía Tây)"
-  ],
-  [
-   20,
-   2074,
-   3100,
-   -1026,
-   "Quay sang PHẢI (về phía Tây)"
-  ]
- ],
- "modes": {
-  "openloop": {
-   "mean": 4.26,
-   "max": 19.35,
-   "runs": 22
-  },
-  "closedloop": {
-   "mean": 6.28,
-   "max": 82.34,
-   "runs": 118
-  },
-  "hybrid": {
-   "mean": 2.9,
-   "max": 17.85,
-   "runs": 83
-  }
- },
- "delta_days": {
-  "21/3": -0.4036532018543165,
-  "21/6": 23.449782846813658,
-  "23/9": -1.0088713639562412,
-  "21/12": -23.449782846813658
- },
- "hours": [
-  6,
-  7,
-  8,
-  9,
-  10,
-  11,
-  12,
-  13,
-  14,
-  15,
-  16,
-  17,
-  18
- ]
 }
